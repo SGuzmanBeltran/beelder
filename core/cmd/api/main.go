@@ -3,6 +3,7 @@ package main
 import (
 	"bee-builder/internal/handlers"
 	"bee-builder/internal/services"
+	"bee-builder/pkg/messaging/redpanda"
 	"log"
 	"net/http"
 	"os"
@@ -24,6 +25,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+
 	setupRoutes(app)
 
 	quit := make(chan os.Signal, 1)
@@ -42,8 +44,15 @@ func main() {
 }
 
 func setupRoutes(app *fiber.App) {
+	// Service configurations
+	producerConfig := &redpanda.RedpandaConfig{
+		Brokers: []string{"localhost:29092"},
+		Topic:   "test",
+	}
+
+
 	// Initializa services
-	serverService := services.NewServerService()
+	serverService := services.NewServerService(producerConfig)
 
 	// Initialize handlers
 	serverHandler := handlers.NewServerHandler(serverService)

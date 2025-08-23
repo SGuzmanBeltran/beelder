@@ -17,7 +17,7 @@ func NewServerHandler(serverService *services.ServerService) *ServerHandler {
 }
 
 func (h *ServerHandler) RegisterRoutes(routes fiber.Router) {
-	servers := routes.Group("/servers")
+	servers := routes.Group("/server")
 
 	servers.Post("", h.createServer)
 }
@@ -29,5 +29,5 @@ func (h *ServerHandler) createServer(c *fiber.Ctx) error {
 			"error": result.Error(),
 		})
 	}
-	return c.SendStatus(fiber.StatusNotImplemented)
+	return c.SendStatus(fiber.StatusCreated)
 }
