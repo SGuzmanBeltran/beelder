@@ -1,0 +1,44 @@
+
+services:
+  ## Infrastructure Services ##
+  # Redpanda Service
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      # 1) Bind two listeners inside the container
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      # 2) Advertise how clients should reach each listener
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092,PLAINTEXT_HOST://localhost:29092
+    ports:
+      - "9092:9092"   # internal within docker network (service name DNS)
+      - "29092:29092" # host access for local dev tools
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "rpk cluster info || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # NATS Service
+  nats:
+    image: nats:latest
+    container_name: nats
+    ports:
+      - "4222:4222"  # NATS messaging port
+      - "8222:8222"  # NATS monitoring port
+    healthcheck:
+      test: ["CMD", "nats-server", "--version"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
