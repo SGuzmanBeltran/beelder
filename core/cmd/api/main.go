@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bee-builder/internal/handlers"
-	"bee-builder/internal/services"
-	"bee-builder/pkg/messaging/redpanda"
+	"beelder/internal/handlers"
+	"beelder/internal/services"
+	"beelder/pkg/messaging/redpanda"
 	"log"
 	"net/http"
 	"os"

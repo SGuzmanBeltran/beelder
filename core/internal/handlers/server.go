@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"bee-builder/internal/services"
+	"beelder/internal/services"
 
 	"github.com/gofiber/fiber/v2"
 )

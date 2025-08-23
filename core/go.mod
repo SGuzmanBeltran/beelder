@@ -1,4 +1,4 @@
-module bee-builder
+module beelder
 
 go 1.25.0
 

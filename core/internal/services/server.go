@@ -1,7 +1,7 @@
 package services
 
 import (
-	"bee-builder/pkg/messaging/redpanda"
+	"beelder/pkg/messaging/redpanda"
 
 	"github.com/segmentio/kafka-go"
 )
