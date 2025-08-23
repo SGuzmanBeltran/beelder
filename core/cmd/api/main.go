@@ -2,6 +2,7 @@ package main
 
 import (
 	"bee-builder/internal/handlers"
+	"bee-builder/internal/services"
 	"log"
 	"net/http"
 	"os"
@@ -30,7 +31,6 @@ func main() {
 
 	go func() {
 		<-quit
-		log.Println("Shutting down server...")
 		if err := app.Shutdown(); err != nil {
 			log.Fatal("Server forced to shutdown:", err)
 		}
@@ -42,12 +42,15 @@ func main() {
 }
 
 func setupRoutes(app *fiber.App) {
+	// Initializa services
+	serverService := services.NewServerService()
+
 	// Initialize handlers
-	serversHandler := handlers.NewServersHandler()
+	serverHandler := handlers.NewServerHandler(serverService)
 
 	// Register routes
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
-	serversHandler.RegisterRoutes(v1)
+	serverHandler.RegisterRoutes(v1)
 }
