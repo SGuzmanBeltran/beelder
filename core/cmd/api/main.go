@@ -1,8 +1,9 @@
 package main
 
 import (
-	"beelder/internal/handlers"
-	"beelder/internal/services"
+	"beelder/internal/api/handlers"
+	"beelder/internal/api/services"
+	config "beelder/internal/config/api"
 	"beelder/pkg/messaging/redpanda"
 	"log"
 	"net/http"
@@ -46,8 +47,8 @@ func main() {
 func setupRoutes(app *fiber.App) {
 	// Service configurations
 	producerConfig := &redpanda.RedpandaConfig{
-		Brokers: []string{"localhost:29092"},
-		Topic:   "test",
+		Brokers: []string{config.ApiEnvs.Broker},
+		Topic:   config.ApiEnvs.ServerCommdansTopic,
 	}
 
 

@@ -20,9 +20,9 @@ func NewServerService(brokerConfig *redpanda.RedpandaConfig) *ServerService {
 
 func (s *ServerService) CreateServer() error {
 	// Implement the logic to create a server
-	s.producer.SendMessage(kafka.Message{
+	go s.producer.SendMessage(kafka.Message{
 		Key:   []byte("server.create"),
-		Value: []byte("New server created"),
+		Value: []byte("Create new server command"),
 	})
 	return nil
 }

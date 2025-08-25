@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"beelder/internal/services"
+	"beelder/internal/api/services"
 
 	"github.com/gofiber/fiber/v2"
 )
