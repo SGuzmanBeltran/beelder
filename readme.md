@@ -23,10 +23,19 @@ creation.
 
 **User Experience:**
 - Server connection details once ready
-- Basic server management (start/stop/restart)
+- Create the server based on a configuration
 
 **Definition of Done:**
 - User can create a server through API
 - Server starts successfully and accepts connections
 - Progress is tracked
 - Basic server info is accessible (IP, port, status)
+
+**TODO**
+1. [ ] Enable configuration.
+    - [ ] Receive configuration as an JSON in the endpoint
+    - [ ] Send the configuration in the broker message
+    - [ ] Receive the configuration in the broker consumer
+2. [ ] Create the server based on configuration.
+3. [ ] Create the server using different strategies (Server types like Paper, Forge, Fabric).
+4. [ ] Communicate the server creation progress using a broker.
