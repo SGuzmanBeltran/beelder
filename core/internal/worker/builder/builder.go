@@ -11,77 +11,93 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/build"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
-type Builder struct{}
+type Builder struct{
+	healthChecker *HealthChecker
+}
 
 func NewBuilder() *Builder {
-	return &Builder{}
+	healthChecker := NewHealthChecker()
+	return &Builder{
+		healthChecker: healthChecker,
+	}
 }
 
 func (b *Builder) BuildServer() error {
-	_ = context.Background()
+	ctx := context.Background()
 
-	// TODO: search the image, if not found, build it
-	err := b.buildImageFromDockerfile(BasicServerTemplate, "minecraft-server:latest")
+	imageName := "minecraft-server:latest"
+
+	err := b.buildImageFromDockerfile(BasicServerTemplate, imageName)
 
 	if err != nil {
 		return err
 	}
 
-	// cli, err := docker.NewClientWithOpts(
-	// 	docker.WithHost("unix:///Users/card/.docker/run/docker.sock"),
-	// 	docker.WithAPIVersionNegotiation(),
-	// )
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer cli.Close()
+	cli, err := client.NewClientWithOpts(
+		client.WithHost("unix:///Users/card/.docker/run/docker.sock"),
+	)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
 
-	// _, err = cli.ImagePull(ctx, "docker.io/library/debian:bookworm-slim", image.PullOptions{})
-	// if err != nil {
-	// 	return err
-	// }
+	// Create container with restart policy
+	fmt.Println("Creating container...")
+	resp, err := cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: imageName,
+			ExposedPorts: nat.PortSet{
+				"25565/tcp": {},
+			},
+		},
+		&container.HostConfig{
+			PortBindings: nat.PortMap{
+				"25565/tcp": []nat.PortBinding{
+					{
+						HostIP:   "0.0.0.0",
+						HostPort: "25565",
+					},
+				},
+			},
+			RestartPolicy: container.RestartPolicy{
+				Name: "unless-stopped",
+			},
+		},
+		&network.NetworkingConfig{},
+		nil,
+		"minecraft-server",
+	)
+	if err != nil {
+		return err
+	}
 
-	// // Create container
-	// port, _ := nat.NewPort("tcp", "25565")
-	// resp, err := cli.ContainerCreate(ctx, &container.Config{
-	// 	Image: "debian:bookworm-slim",
-	// 	Tty:   false,
-	// 	Cmd:   []string{"sleep", "infinity"},
-	// }, &container.HostConfig{
-	// 	PortBindings: nat.PortMap{
-	// 		port: []nat.PortBinding{
-	// 			{HostIP: "0.0.0.0", HostPort: "25565"},
-	// 		},
-	// 	},
-	// 	Resources: container.Resources{
-	// 		Memory:   1 * 1024 * 1024 * 1024, // 1GB
-	// 		NanoCPUs: 1 * 1e9,                // 1 CPUs
-	// 	},
-	// }, nil, nil, "mc-test1")
+	fmt.Println("Container created with ID:", resp.ID)
+	// Start container
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return err
+	}
+	fmt.Printf("Minecraft server started in background with ID: %s\n", resp.ID)
+	fmt.Println("Connect to the server at localhost:25565")
+	fmt.Printf("To view logs: docker logs -f %s\n", resp.ID)
+	fmt.Printf("To stop: docker stop %s\n", resp.ID)
 
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Health check: verify if the Minecraft server is responding on TCP port 25565
+	fmt.Println("Checking if Minecraft server is responding...")
 
-	// if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-	// 	panic(err)
-	// }
+	if err := b.healthChecker.waitForServerReady(resp.ID, 120*time.Second); err != nil {
+		fmt.Printf("Warning: Server health check failed: %v\n", err)
+		fmt.Println("The server might still be starting up. Check logs with: docker logs -f", resp.ID)
+	} else {
+		fmt.Println("✅ Minecraft server is ready and accepting connections!")
+	}
 
-	// fmt.Println("Minecraft server started in container:", resp.ID[:12])
-
-	// cmd := exec.Command("echo", "hello")
-
-	// // Run and capture the output
-	// output, err := cmd.CombinedOutput()
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	return err
-	// }
-
-	// fmt.Println("Output:", string(output))
 	return nil
 }
 
@@ -120,7 +136,7 @@ func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName s
 
 	buildResp, err := cli.ImageBuild(ctx, buildContext, buildOptions)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer buildResp.Body.Close()
 

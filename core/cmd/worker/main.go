@@ -2,12 +2,13 @@ package main
 
 import (
 	"beelder/internal/worker"
+	"beelder/internal/worker/builder"
 	"log"
 )
 
 func main() {
 
-	builder := worker.NewBuilder()
+	builder := builder.NewBuilder()
 	worker := worker.NewWorker(builder)
 
 	if err := worker.Start(); err != nil {

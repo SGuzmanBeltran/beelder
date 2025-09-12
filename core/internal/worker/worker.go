@@ -2,6 +2,7 @@ package worker
 
 import (
 	config "beelder/internal/config/worker"
+	"beelder/internal/worker/builder"
 	"beelder/pkg/messaging/redpanda"
 	"fmt"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type Worker struct {
-	builder *Builder
+	builder *builder.Builder
 }
 
-func NewWorker(builder *Builder) *Worker {
+func NewWorker(builder *builder.Builder) *Worker {
 	return &Worker{
 		builder: builder,
 	}
@@ -20,8 +21,16 @@ func NewWorker(builder *Builder) *Worker {
 
 func (w *Worker) handleCreateServer(message kafka.Message) error {
 	fmt.Println("Processing message:", string(message.Value))
+
+	if message.Value == nil {
+		return fmt.Errorf("message value is nil")
+	}
 	// Process the message
-	w.builder.BuildServer()
+	err := w.builder.BuildServer()
+	if err != nil {
+		fmt.Println("Error building server:", err)
+	}
+
 	return nil
 }
 

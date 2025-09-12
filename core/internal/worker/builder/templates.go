@@ -1,6 +1,6 @@
 package builder
 
-var BasicServerTemplate = `FROM alpine:latest
+const BasicServerTemplate = `FROM alpine:latest
 
 # Install necessary packages (openjdk for Minecraft, bash, curl, etc.)
 RUN apk add --no-cache openjdk21-jre bash curl
