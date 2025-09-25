@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"beelder/internal/api/services"
+	"beelder/internal/types"
 	"beelder/pkg/validation"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,17 +21,11 @@ func NewServerHandler(serverService *services.ServerService) *ServerHandler {
 func (h *ServerHandler) RegisterRoutes(routes fiber.Router) {
 	servers := routes.Group("/server")
 
-	servers.Post("", validation.ValidateBody[CreateServerConfig], h.createServer)
-}
-
-type CreateServerConfig struct {
-	ServerType      string `json:"server_type" validate:"required"`
-	QuantityMembers int    `json:"quantity_members" validate:"required,min=1"`
-	PlanType        string `json:"plan_type" validate:"required"`
+	servers.Post("", validation.ValidateBody[types.CreateServerConfig], h.createServer)
 }
 
 func (h *ServerHandler) createServer(c *fiber.Ctx) error {
-	var serverConfig CreateServerConfig
+	var serverConfig types.CreateServerConfig
 
 	if err := c.BodyParser(serverConfig); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
