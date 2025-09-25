@@ -52,7 +52,7 @@ func setupRoutes(app *fiber.App) {
 	}
 
 
-	// Initializa services
+	// Initialize services
 	serverService := services.NewServerService(producerConfig)
 
 	// Initialize handlers
