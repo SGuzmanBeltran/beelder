@@ -1,7 +1,9 @@
 package services
 
 import (
+	"beelder/internal/types"
 	"beelder/pkg/messaging/redpanda"
+	"encoding/json"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -18,11 +20,17 @@ func NewServerService(brokerConfig *redpanda.RedpandaConfig) *ServerService {
 	}
 }
 
-func (s *ServerService) CreateServer() error {
-	// Implement the logic to create a server
+func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) error {
+	// Convert struct to JSON bytes
+	jsonBytes, err := json.Marshal(serverConfig)
+    if err != nil {
+        return err
+    }
+
+	// Send message with JSON bytes
 	go s.producer.SendMessage(kafka.Message{
 		Key:   []byte("server.create"),
-		Value: []byte("Create new server command"),
+		Value: jsonBytes,
 	})
 	return nil
 }

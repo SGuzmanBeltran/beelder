@@ -2,8 +2,10 @@ package worker
 
 import (
 	config "beelder/internal/config/worker"
+	"beelder/internal/types"
 	"beelder/internal/worker/builder"
 	"beelder/pkg/messaging/redpanda"
+	"encoding/json"
 	"fmt"
 
 	"github.com/segmentio/kafka-go"
@@ -22,14 +24,24 @@ func NewWorker(builder *builder.Builder) *Worker {
 func (w *Worker) handleCreateServer(message kafka.Message) error {
 	fmt.Println("Processing message:", string(message.Value))
 
+	// Create a pointer to the config struct
+    serverConfig := &types.CreateServerConfig{}
+
+    // Unmarshal JSON into the struct
+    if err := json.Unmarshal(message.Value, serverConfig); err != nil {
+        return fmt.Errorf("failed to unmarshal server config: %w", err)
+    }
+
+	fmt.Printf("Processed config: %+v\n", serverConfig)
+
 	if message.Value == nil {
 		return fmt.Errorf("message value is nil")
 	}
-	// Process the message
-	err := w.builder.BuildServer()
-	if err != nil {
-		fmt.Println("Error building server:", err)
-	}
+
+    // Pass the config to BuildServer
+    if err := w.builder.BuildServer(serverConfig); err != nil {
+        return fmt.Errorf("failed to build server: %w", err)
+    }
 
 	return nil
 }

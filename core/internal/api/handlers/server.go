@@ -25,19 +25,16 @@ func (h *ServerHandler) RegisterRoutes(routes fiber.Router) {
 }
 
 func (h *ServerHandler) createServer(c *fiber.Ctx) error {
-	var serverConfig types.CreateServerConfig
+	// Get the validated config from context
+    serverConfig := c.Locals("validated").(*types.CreateServerConfig)
 
-	if err := c.BodyParser(serverConfig); err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "error": "Cannot parse request body",
-        })
-    }
-
-	result := h.serverService.CreateServer()
-	if result != nil {
+	if err := h.serverService.CreateServer(serverConfig); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": result.Error(),
-		})
+            "error": err.Error(),
+        })
 	}
-	return c.SendStatus(fiber.StatusCreated)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+        "message": "Server creation started",
+        "name": serverConfig.Name,
+    })
 }

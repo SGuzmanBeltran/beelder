@@ -2,6 +2,7 @@ package builder
 
 import (
 	"archive/tar"
+	"beelder/internal/types"
 	"bytes"
 	"context"
 	"fmt"
@@ -28,7 +29,7 @@ func NewBuilder() *Builder {
 	}
 }
 
-func (b *Builder) BuildServer() error {
+func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 	ctx := context.Background()
 
 	imageName := "minecraft-server:latest"
