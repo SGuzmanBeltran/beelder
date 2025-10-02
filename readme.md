@@ -8,10 +8,11 @@ In the first slice I desire that we have the creation server flow, the user is a
 creation.
 
 **Configuration Options:**
-- Player count (affects memory allocation)
-- Server type (Paper 1.21.x initially)
-- Difficulty (Peaceful, Easy, Normal, Hard)
 - Server name/MOTD
+- Server type (Paper 1.21.x initially)
+- Player count (affects memory allocation)
+- Plan type (free, budget, premium)
+- Difficulty (Peaceful, Easy, Normal, Hard)
 - Online mode (official Minecraft accounts only)
 
 **The progress states the server should report will be:**
@@ -36,6 +37,6 @@ creation.
     - [x] Receive configuration as an JSON in the endpoint
     - [x] Send the configuration in the broker message
     - [x] Receive the configuration in the broker consumer
-2. [ ] Create the server based on configuration.
+2. [x] Create the server based on configuration.
 3. [ ] Create the server using different strategies (Server types like Paper, Forge, Fabric).
 4. [ ] Communicate the server creation progress using a broker.

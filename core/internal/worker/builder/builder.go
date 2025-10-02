@@ -16,25 +16,47 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/google/uuid"
 )
 
 type Builder struct{
 	healthChecker *HealthChecker
+	portCounter int
 }
 
 func NewBuilder() *Builder {
 	healthChecker := NewHealthChecker()
 	return &Builder{
 		healthChecker: healthChecker,
+		portCounter: 25565,
 	}
+}
+
+func DetermineMemorySettings(planType string) string {
+	memorySettings := ""
+	switch planType {
+	case "free":
+		memorySettings = `"-Xmx512M", "-Xms512M"`
+	case "budget":
+		memorySettings = `"-Xmx1G", "-Xms1G"`
+	case "premium":
+		memorySettings = `"-Xmx2G", "-Xms2G"`
+	default:
+		memorySettings = `"-Xmx512M", "-Xms512M"`
+	}
+	return memorySettings
 }
 
 func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 	ctx := context.Background()
 
-	imageName := "minecraft-server:latest"
+	memorySettings := DetermineMemorySettings(serverConfig.PlanType)
 
-	err := b.buildImageFromDockerfile(BasicServerTemplate, imageName)
+	imageName := fmt.Sprintf("ms-%s-%s:latest", serverConfig.ServerType, serverConfig.PlanType)
+
+	dockerfile := BuildBasicDockerfile(serverConfig.ServerType, memorySettings)
+
+	err := b.buildImageFromDockerfile(dockerfile, imageName, serverConfig)
 
 	if err != nil {
 		return err
@@ -63,7 +85,7 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 				"25565/tcp": []nat.PortBinding{
 					{
 						HostIP:   "0.0.0.0",
-						HostPort: "25565",
+						HostPort: fmt.Sprintf("%d", b.portCounter),
 					},
 				},
 			},
@@ -73,7 +95,7 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 		},
 		&network.NetworkingConfig{},
 		nil,
-		"minecraft-server",
+		fmt.Sprintf("ms-%s-%s-%s", serverConfig.ServerType, serverConfig.PlanType, uuid.New().String()),
 	)
 	if err != nil {
 		return err
@@ -99,11 +121,14 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 		fmt.Println("✅ Minecraft server is ready and accepting connections!")
 	}
 
+	// Increment port counter for next server (if implementing multiple servers in future)
+	b.portCounter++
+
 	return nil
 }
 
 // buildImageFromDockerfile builds a Docker image from Dockerfile content (string) with the specified image name.
-func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName string) error {
+func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName string, serverConfig *types.CreateServerConfig) error {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(
 		client.WithHost("unix:///Users/card/.docker/run/docker.sock"),
@@ -123,7 +148,7 @@ func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName s
 	fmt.Printf("Image %s not found, building...\n", imageName)
 
 	// Create build context
-	buildContext, err := createBuildContext(dockerfileContent)
+	buildContext, err := createBuildContext(dockerfileContent, serverConfig.ServerType)
 	if err != nil {
 		return err
 	}
@@ -151,7 +176,7 @@ func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName s
 }
 
 // createBuildContext creates a tar archive in memory with the Dockerfile and the server jar
-func createBuildContext(dockerfileContent string) (io.Reader, error) {
+func createBuildContext(dockerfileContent string, serverType string) (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -166,14 +191,14 @@ func createBuildContext(dockerfileContent string) (io.Reader, error) {
 		return nil, err
 	}
 
-	jarPath := filepath.Join(projectRoot, "assets", "executables", "paper-1.21.8-58.jar")
+	jarPath := filepath.Join(projectRoot, "assets", "executables", fmt.Sprintf("%s.jar", serverType))
 
 	jarBytes, err := os.ReadFile(jarPath)
 	if err != nil {
 		return nil, err
 	}
 	// Add to tar with the path expected by Dockerfile
-	if err := addTarFile(tw, "assets/executables/paper-1.21.8-58.jar", jarBytes); err != nil {
+	if err := addTarFile(tw, fmt.Sprintf("assets/executables/%s.jar", serverType), jarBytes); err != nil {
 		return nil, err
 	}
 	return buf, nil
