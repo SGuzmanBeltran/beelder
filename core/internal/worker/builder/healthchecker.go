@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -33,22 +34,38 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 
 	// Monitor container logs for the "Done" message
 	for time.Since(start) < timeout {
-		// Get container logs from the last few seconds
+		// Get container logs
 		logs, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,
-			Tail:       "50", // Get last 50 lines
+			Tail:       "200", // Get more lines to ensure we catch the message
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get container logs: %v", err)
 		}
 
-		// Read the logs
-		logContent := make([]byte, 4096)
-		n, _ := logs.Read(logContent)
+		// Read ALL available logs, not just 4096 bytes
+		logContent := make([]byte, 0, 8192)
+		buf := make([]byte, 4096)
+		for {
+			n, err := logs.Read(buf)
+			if n > 0 {
+				logContent = append(logContent, buf[:n]...)
+			}
+			if err != nil {
+				break
+			}
+		}
 		logs.Close()
 
-		logString := string(logContent[:n])
+		// Strip Docker log headers (first 8 bytes of each line)
+		logString := hc.stripDockerHeaders(string(logContent))
+
+		// Debug: print last few lines
+		lines := strings.Split(logString, "\n")
+		if len(lines) > 3 {
+			fmt.Printf("Latest logs: %s\n", strings.Join(lines[len(lines)-4:], "\n"))
+		}
 
 		// Check for Minecraft server ready indicators
 		if hc.isServerReady(logString) {
@@ -73,17 +90,32 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 	return fmt.Errorf("timeout: Minecraft server did not become ready within %v", timeout)
 }
 
+// stripDockerHeaders removes the 8-byte Docker log headers from log content
+func (hc *HealthChecker) stripDockerHeaders(logContent string) string {
+	lines := strings.Split(logContent, "\n")
+	var cleaned []string
+	for _, line := range lines {
+		// Docker prepends 8 bytes: [stream_type, 0, 0, 0, size (4 bytes)]
+		if len(line) > 8 {
+			cleaned = append(cleaned, line[8:])
+		} else if len(line) > 0 {
+			cleaned = append(cleaned, line)
+		}
+	}
+	return strings.Join(cleaned, "\n")
+}
+
 // isServerReady checks log content for indicators that the Minecraft server is ready
 func (hc *HealthChecker) isServerReady(logContent string) bool {
 	readyIndicators := []string{
-		"Done (",                  // Paper/Spigot: "Done (4.123s)! For help, type \"help\""
+		"Done",                  // Paper/Spigot: "Done (4.123s)! For help, type \"help\""
 		"Server startup",          // Some servers: "Server startup complete"
 		"Time elapsed:",           // Vanilla: Shows when done loading
 		"For help, type \"help\"", // Common ready message
 	}
 
 	for _, indicator := range readyIndicators {
-		if contains(logContent, indicator) {
+		if strings.Contains(logContent, indicator) {
 			return true
 		}
 	}
@@ -92,34 +124,18 @@ func (hc *HealthChecker) isServerReady(logContent string) bool {
 
 // hasServerError checks for common error conditions in logs
 func (hc *HealthChecker) hasServerError(logContent string) bool {
-	errorIndicators := []string{
-		"Exception",
-		"Error",
+	// Only check for critical errors that actually prevent server startup
+	// Ignore common warnings/errors that don't stop the server
+	criticalErrorIndicators := []string{
 		"Failed to bind to port",
-		"Could not load",
 		"OutOfMemoryError",
+		"java.lang.RuntimeException",
+		"Server crashed",
+		"Encountered an unexpected exception",
 	}
 
-	for _, indicator := range errorIndicators {
-		if contains(logContent, indicator) {
-			return true
-		}
-	}
-	return false
-}
-
-
-// contains checks if a string contains a substring (case-insensitive)
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) &&
-		(s == substr || len(s) > len(substr) &&
-			(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-				containsAt(s, substr, 1)))
-}
-
-func containsAt(s, substr string, start int) bool {
-	for i := start; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
+	for _, indicator := range criticalErrorIndicators {
+		if strings.Contains(logContent, indicator) {
 			return true
 		}
 	}
