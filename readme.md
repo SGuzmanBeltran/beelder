@@ -38,5 +38,6 @@ creation.
     - [x] Send the configuration in the broker message
     - [x] Receive the configuration in the broker consumer
 2. [x] Create the server based on configuration.
-3. [ ] Create the server using different strategies (Server types like Paper, Forge, Fabric).
+3. [x] Create the server using different strategies (Server types like Paper, Forge, Fabric).
 4. [ ] Communicate the server creation progress using a broker.
+5. [ ] Refactor server templates to use Strategy Pattern

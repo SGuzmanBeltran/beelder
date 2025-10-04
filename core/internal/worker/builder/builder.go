@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/build"
@@ -33,7 +34,7 @@ func NewBuilder() *Builder {
 }
 
 func DetermineMemorySettings(planType string) string {
-	memorySettings := ""
+	var memorySettings string
 	switch planType {
 	case "free":
 		memorySettings = `"-Xmx512M", "-Xms512M"`
@@ -48,15 +49,23 @@ func DetermineMemorySettings(planType string) string {
 }
 
 func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
-	ctx := context.Background()
+    ctx := context.Background()
 
-	memorySettings := DetermineMemorySettings(serverConfig.PlanType)
+    memorySettings := DetermineMemorySettings(serverConfig.PlanType)
 
-	imageName := fmt.Sprintf("ms-%s-%s:latest", serverConfig.ServerType, serverConfig.PlanType)
+    imageName := fmt.Sprintf("ms-%s-%s:latest", serverConfig.ServerType, serverConfig.PlanType)
 
-	dockerfile := BuildBasicDockerfile(serverConfig.ServerType, memorySettings)
+    var dockerfile string
+    serverTypeLower := strings.ToLower(serverConfig.ServerType)
 
-	err := b.buildImageFromDockerfile(dockerfile, imageName, serverConfig)
+    switch {
+    case strings.Contains(serverTypeLower, "forge"):
+        dockerfile = BuildForgeDockerfile(serverConfig.ServerType)
+    default:
+        dockerfile = BuildBasicDockerfile(serverConfig.ServerType, memorySettings)
+    }
+
+    err := b.buildImageFromDockerfile(dockerfile, imageName, serverConfig)
 
 	if err != nil {
 		return err
