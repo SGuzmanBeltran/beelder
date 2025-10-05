@@ -2,6 +2,7 @@ package builder
 
 import (
 	"archive/tar"
+	config "beelder/internal/config/worker"
 	"beelder/internal/types"
 	"bytes"
 	"context"
@@ -9,7 +10,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/build"
@@ -33,37 +33,15 @@ func NewBuilder() *Builder {
 	}
 }
 
-func DetermineMemorySettings(planType string) string {
-	var memorySettings string
-	switch planType {
-	case "free":
-		memorySettings = `"-Xmx512M", "-Xms512M"`
-	case "budget":
-		memorySettings = `"-Xmx1G", "-Xms1G"`
-	case "premium":
-		memorySettings = `"-Xmx2G", "-Xms2G"`
-	default:
-		memorySettings = `"-Xmx512M", "-Xms512M"`
-	}
-	return memorySettings
-}
-
 func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
     ctx := context.Background()
 
-    memorySettings := DetermineMemorySettings(serverConfig.PlanType)
-
     imageName := fmt.Sprintf("ms-%s-%s:latest", serverConfig.ServerType, serverConfig.PlanType)
 
-    var dockerfile string
-    serverTypeLower := strings.ToLower(serverConfig.ServerType)
-
-    switch {
-    case strings.Contains(serverTypeLower, "forge"):
-        dockerfile = BuildForgeDockerfile(serverConfig.ServerType)
-    default:
-        dockerfile = BuildBasicDockerfile(serverConfig.ServerType, memorySettings)
-    }
+    // Strategy now handles everything including memory
+    strategyFactory := &DefaultStrategyFactory{}
+    buildStrategy := strategyFactory.GetStrategy(serverConfig)
+    dockerfile := buildStrategy.GenerateDockerfile(serverConfig)
 
     err := b.buildImageFromDockerfile(dockerfile, imageName, serverConfig)
 
@@ -72,7 +50,7 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 	}
 
 	cli, err := client.NewClientWithOpts(
-		client.WithHost("unix:///Users/card/.docker/run/docker.sock"),
+		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
 		return err
@@ -140,7 +118,7 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName string, serverConfig *types.CreateServerConfig) error {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(
-		client.WithHost("unix:///Users/card/.docker/run/docker.sock"),
+		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
 		return err

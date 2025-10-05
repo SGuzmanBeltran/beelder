@@ -1,7 +1,5 @@
 package builder
 
-import "fmt"
-
 const BasicServerTemplate = `FROM alpine:latest
 
 # Install necessary packages (openjdk for Minecraft, bash, curl, etc.)
@@ -20,7 +18,7 @@ EXPOSE 25565
 RUN echo "eula=true" > eula.txt
 
 # Default command to start the Minecraft server
-CMD ["java", %s, "-jar", "server.jar", "nogui"]
+CMD ["java", "-Xms%s", "-Xmx%s", "-jar", "server.jar", "nogui"]
 `
 
 const ForgeServerTemplate = `FROM alpine:latest
@@ -40,17 +38,12 @@ RUN echo "eula=true" > eula.txt
 # Run Forge installer (this creates the server files)
 RUN java -jar forge-installer.jar --installServer
 
+# Configure JVM memory settings via user_jvm_args.txt
+RUN echo "-Xms%s" > user_jvm_args.txt && echo "-Xmx%s" >> user_jvm_args.txt
+
 # Expose default Minecraft port
 EXPOSE 25565
 
 # Start the server using the run.sh script created by Forge installer
 CMD ["bash", "run.sh"]
 `
-
-func BuildBasicDockerfile(serverType string, memorySettings string) string {
-	return fmt.Sprintf(BasicServerTemplate, serverType, memorySettings)
-}
-
-func BuildForgeDockerfile(serverType string) string {
-	return fmt.Sprintf(ForgeServerTemplate, serverType)
-}

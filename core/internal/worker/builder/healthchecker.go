@@ -1,6 +1,7 @@
 package builder
 
 import (
+	config "beelder/internal/config/worker"
 	"context"
 	"fmt"
 	"strings"
@@ -23,7 +24,7 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(
-		client.WithHost("unix:///Users/card/.docker/run/docker.sock"),
+		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
 		return err

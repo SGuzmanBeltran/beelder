@@ -8,3 +8,8 @@ type CreateServerConfig struct {
 	Difficulty   string `json:"difficulty" validate:"required,oneof=peaceful easy normal hard"`
 	OnlineMode   bool   `json:"online_mode" validate:"boolean"`
 }
+
+type MemorySettings struct {
+	Min string
+	Max string
+}
