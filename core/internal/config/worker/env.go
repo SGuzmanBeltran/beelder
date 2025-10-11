@@ -25,6 +25,7 @@ func initConfig() WorkerConfig {
 		ConsumerTopic: config.GetEnv("CONSUMER_TOPIC"),
 		ProducerTopic:  config.GetEnv("PRODUCER_TOPIC"),
 		GroupID: config.GetEnv("GROUP_ID"),
+		DockerHost: config.GetEnv("DOCKER_HOST"),
 	}
 
 	return config

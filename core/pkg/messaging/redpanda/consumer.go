@@ -57,9 +57,7 @@ func (rc *RedpandaConsumer) ReadMessage(callback func(kafka.Message) error) erro
 		logger.Info("Message received", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset, "key", string(m.Key), "value", string(m.Value))
 
 		if err := callback(m); err != nil {
-			logger.Error("processing failed, not committing offset", "error", err)
-			// optionally push to DLQ or backoff, then continue
-			continue
+			logger.Error("processing failed", "error", err)
 		}
 
 		if err := rc.reader.CommitMessages(ctx, m); err != nil {
