@@ -1,6 +1,7 @@
 package types
 
 type CreateServerData struct {
+	ContainerID  string
 	ServerID     string
 	ServerConfig *CreateServerConfig
 	ImageName 	 string

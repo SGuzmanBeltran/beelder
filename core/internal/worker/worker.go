@@ -52,7 +52,6 @@ func (w *Worker) handleCreateServer(message kafka.Message) error {
 	createLogger.Info("building server")
 	if err := w.builder.BuildServer(ctx, createServerData); err != nil {
 		createLogger.Error("server build failed", "error", err)
-		//todo: handle failure
 		return err
 	}
 

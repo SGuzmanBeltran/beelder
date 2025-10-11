@@ -40,6 +40,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
     imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType)
 	serverData.ImageName = imageName
 	builderLogger := b.logger.With(
+		"action", "build_server",
 		"server_id", serverData.ServerID,
 		"server_type", serverData.ServerConfig.ServerType,
 		"plan_type", serverData.ServerConfig.PlanType,
@@ -95,6 +96,8 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
+	serverData.ContainerID = resp.ID
+
 	builderLogger.Info("Container created", "ID", resp.ID)
 
 	// Start container
@@ -110,11 +113,14 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	builderLogger.Info("Checking if Minecraft server is responding...")
 
 	if err := b.healthChecker.waitForServerReady(resp.ID, 120*time.Second, serverData); err != nil {
-		builderLogger.Warn("Server health check failed", "error", err)
-		builderLogger.Warn("The server might still be starting up. Check logs with: docker logs -f " + resp.ID)
+		builderLogger.Error("health check failed, rolling back", "error", err)
 
-		//todo: handle failure (e.g., stop and remove container)
-		return err
+		if removeErr := b.DestroyServer(ctx, serverData.ContainerID); removeErr != nil {
+			return fmt.Errorf("health check failed and rollback failed: health_error=%w, remove_error=%v", err, removeErr)
+		}
+
+		builderLogger.Info("unhealthy container removed", "container_id", resp.ID[:12])
+		return fmt.Errorf("health check failed for server %s: %w", serverData.ServerConfig.Name, err)
 	}
 	builderLogger.Info("✅ Minecraft server is ready and accepting connections!")
 
@@ -122,6 +128,31 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	b.portCounter++
 
 	return nil
+}
+
+func (b *Builder) DestroyServer(ctx context.Context, containerID string) error {
+	builderLogger := b.logger.With(
+		"action", "destroy_server",
+		"container_id", containerID,
+	)
+	builderLogger.Info("Destroying server...")
+    cli, err := client.NewClientWithOpts(
+        client.WithHost(config.WorkerEnvs.DockerHost),
+    )
+    if err != nil {
+		builderLogger.Error("Failed to connect to Docker", "error", err)
+        return fmt.Errorf("failed to connect to Docker: %w", err)
+    }
+    defer cli.Close()
+
+    if err := cli.ContainerRemove(ctx, containerID, container.RemoveOptions{
+        Force: true,
+    }); err != nil {
+		builderLogger.Error("Failed to remove container", "error", err)
+        return fmt.Errorf("failed to remove container %s: %w", containerID[:12], err)
+    }
+
+    return nil
 }
 
 // buildImageFromDockerfile builds a Docker image from Dockerfile content (string) with the specified image name.
