@@ -25,7 +25,7 @@ func NewHealthChecker() *HealthChecker {
 
 // waitForServerReady checks if the Minecraft server is actually ready to accept players
 // It does this by monitoring the container logs for the "Done" message that indicates server readiness
-func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Duration, serverData *types.CreateServerData) error {
+func (hc *HealthChecker) waitForServerReady(containerID string, serverData *types.CreateServerData) error {
 	healthCheckerLogger := hc.logger.With(
 		"server_id", serverData.ServerID,
 		"server_type", serverData.ServerConfig.ServerType,
@@ -47,7 +47,7 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 	start := time.Now()
 
 	// Monitor container logs for the "Done" message
-	for time.Since(start) < timeout {
+	for time.Since(start) < time.Duration(config.WorkerEnvs.BuilderConfig.BuildTimeout)*time.Second {
 		// Get container logs
 		logs, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
 			ShowStdout: true,
@@ -101,7 +101,7 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 		time.Sleep(2 * time.Second)
 	}
 
-	return fmt.Errorf("timeout: Minecraft server did not become ready within %v", timeout)
+	return fmt.Errorf("timeout: Minecraft server did not become ready within %v", time.Duration(config.WorkerEnvs.BuilderConfig.BuildTimeout)*time.Second)
 }
 
 // stripDockerHeaders removes the 8-byte Docker log headers from log content

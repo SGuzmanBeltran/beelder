@@ -112,7 +112,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	// Health check: verify if the Minecraft server is responding on TCP port 25565
 	builderLogger.Info("Checking if Minecraft server is responding...")
 
-	if err := b.healthChecker.waitForServerReady(resp.ID, 120*time.Second, serverData); err != nil {
+	if err := b.healthChecker.waitForServerReady(resp.ID, serverData); err != nil {
 		builderLogger.Error("health check failed, rolling back", "error", err)
 
 		if removeErr := b.DestroyServer(ctx, serverData.ContainerID); removeErr != nil {
