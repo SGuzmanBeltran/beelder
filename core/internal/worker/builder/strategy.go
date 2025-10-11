@@ -9,65 +9,110 @@ import (
 // BuildStrategy defines how to build different server types
 type BuildStrategy interface {
 	GenerateDockerfile(config *types.CreateServerConfig) string
-	GetMemorySettings(planType string) *types.MemorySettings
+	GetResourceSettings() *ResourceSettings
 }
 
-// BasicBuildStrategy for Paper/Vanilla servers
-type BasicBuildStrategy struct{}
-
-func (s *BasicBuildStrategy) GenerateDockerfile(config *types.CreateServerConfig) string {
-	memory := s.GetMemorySettings(config.PlanType)
-	return fmt.Sprintf(BasicServerTemplate, config.ServerType, memory.Min, memory.Max)
+// ResourceSettings holds the resource configuration for a plan
+type ResourceSettings struct {
+	MemoryMin   string
+	MemoryMax   string
+	MemoryLimit int64
+	CPULimit    int64
 }
 
-func (s *BasicBuildStrategy) GetMemorySettings(planType string) *types.MemorySettings {
+// GetResourceSettings returns resource settings based on plan type and server type
+func GetResourceSettings(planType string, serverType string) *ResourceSettings {
+	isModded := strings.Contains(strings.ToLower(serverType), "forge")
+
 	switch planType {
 	case "budget":
-		return &types.MemorySettings{Min: "512M", Max: "1G"}
+		if isModded {
+			return &ResourceSettings{
+				MemoryMin:   "1G",
+				MemoryMax:   "2G",
+				MemoryLimit: 2560 * 1024 * 1024, // 2.5GB
+				CPULimit:    1e9,
+			}
+		}
+		return &ResourceSettings{
+			MemoryMin:   "512M",
+			MemoryMax:   "1G",
+			MemoryLimit: 1536 * 1024 * 1024, // 1.5GB
+			CPULimit:    1e9,
+		}
 	case "premium":
-		return &types.MemorySettings{Min: "1G", Max: "2G"}
+		if isModded {
+			return &ResourceSettings{
+				MemoryMin:   "2G",
+				MemoryMax:   "4G",
+				MemoryLimit: 5 * 1024 * 1024 * 1024, // 5GB
+				CPULimit:    2e9,
+			}
+		}
+		return &ResourceSettings{
+			MemoryMin:   "1G",
+			MemoryMax:   "2G",
+			MemoryLimit: 2560 * 1024 * 1024, // 2.5GB
+			CPULimit:    2e9,
+		}
 	default: // free
-		return &types.MemorySettings{Min: "512M", Max: "512M"}
+		if isModded {
+			return &ResourceSettings{
+				MemoryMin:   "512M",
+				MemoryMax:   "1G",
+				MemoryLimit: 1536 * 1024 * 1024, // 1.5GB
+				CPULimit:    5e8,
+			}
+		}
+		return &ResourceSettings{
+			MemoryMin:   "512M",
+			MemoryMax:   "800M",
+			MemoryLimit: 1024 * 1024 * 1024, // 1GB
+			CPULimit:    5e8,
+		}
 	}
+}
+
+// BasicBuildStrategy for Paper/Vanilla/Fabric servers
+type BasicBuildStrategy struct {
+	config   *types.CreateServerConfig
+	settings *ResourceSettings
+}
+
+func NewBasicBuildStrategy(config *types.CreateServerConfig) *BasicBuildStrategy {
+	return &BasicBuildStrategy{
+		config:   config,
+		settings: GetResourceSettings(config.PlanType, config.ServerType),
+	}
+}
+
+func (s *BasicBuildStrategy) GenerateDockerfile(config *types.CreateServerConfig) string {
+	return fmt.Sprintf(BasicServerTemplate, config.ServerType, s.settings.MemoryMin, s.settings.MemoryMax)
+}
+
+func (s *BasicBuildStrategy) GetResourceSettings() *ResourceSettings {
+	return s.settings
 }
 
 // ForgeBuildStrategy for Forge servers
-type ForgeBuildStrategy struct{}
+type ForgeBuildStrategy struct {
+	config   *types.CreateServerConfig
+	settings *ResourceSettings
+}
+
+func NewForgeBuildStrategy(config *types.CreateServerConfig) *ForgeBuildStrategy {
+	return &ForgeBuildStrategy{
+		config:   config,
+		settings: GetResourceSettings(config.PlanType, config.ServerType),
+	}
+}
 
 func (s *ForgeBuildStrategy) GenerateDockerfile(config *types.CreateServerConfig) string {
-	memory := s.GetMemorySettings(config.PlanType)
-	return fmt.Sprintf(ForgeServerTemplate, config.ServerType, memory.Min, memory.Max)
+	return fmt.Sprintf(ForgeServerTemplate, config.ServerType, s.settings.MemoryMin, s.settings.MemoryMax)
 }
 
-func (s *ForgeBuildStrategy) GetMemorySettings(planType string) *types.MemorySettings {
-	// Forge might need different memory allocations
-	switch planType {
-	case "budget":
-		return &types.MemorySettings{Min: "1G", Max: "2G"}
-	case "premium":
-		return &types.MemorySettings{Min: "2G", Max: "4G"}
-	default:
-		return &types.MemorySettings{Min: "512M", Max: "1G"}
-	}
-}
-
-// FabricBuildStrategy for Fabric servers
-type FabricBuildStrategy struct{}
-
-func (s *FabricBuildStrategy) GenerateDockerfile(config *types.CreateServerConfig) string {
-	memory := s.GetMemorySettings(config.PlanType)
-	return fmt.Sprintf(BasicServerTemplate, config.ServerType, memory.Min, memory.Max)
-}
-
-func (s *FabricBuildStrategy) GetMemorySettings(planType string) *types.MemorySettings {
-	switch planType {
-	case "budget":
-		return &types.MemorySettings{Min: "512M", Max: "1G"}
-	case "premium":
-		return &types.MemorySettings{Min: "1G", Max: "2G"}
-	default:
-		return &types.MemorySettings{Min: "512M", Max: "512M"}
-	}
+func (s *ForgeBuildStrategy) GetResourceSettings() *ResourceSettings {
+	return s.settings
 }
 
 // StrategyFactory creates appropriate strategy
@@ -81,10 +126,8 @@ func (f *DefaultStrategyFactory) GetStrategy(config *types.CreateServerConfig) B
 	serverTypeLower := strings.ToLower(config.ServerType)
 	switch {
 	case strings.Contains(serverTypeLower, "forge"):
-		return &ForgeBuildStrategy{}
-	case strings.Contains(serverTypeLower, "fabric"):
-		return &FabricBuildStrategy{}
+		return NewForgeBuildStrategy(config)
 	default:
-		return &BasicBuildStrategy{}
+		return NewBasicBuildStrategy(config)
 	}
 }

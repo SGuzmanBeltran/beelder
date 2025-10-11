@@ -11,6 +11,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types/build"
@@ -22,17 +24,19 @@ import (
 
 type Builder struct{
 	healthChecker *HealthChecker
-	portCounter int
+	portCounter atomic.Int32
 	logger *slog.Logger
+	imageBuildLocks sync.Map
 }
 
 func NewBuilder() *Builder {
 	healthChecker := NewHealthChecker()
-	return &Builder{
+	builder := &Builder{
 		healthChecker: healthChecker,
-		portCounter: 25565,
 		logger:  slog.Default().With("component", "builder"),
 	}
+	builder.portCounter.Store(25565)
+	return builder
 }
 
 func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) error {
@@ -65,6 +69,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	}
 	defer cli.Close()
 
+	port := b.portCounter.Add(1) - 1
 	// Create container with restart policy
 	builderLogger.Info("Creating container...")
 	resp, err := cli.ContainerCreate(
@@ -80,12 +85,16 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 				"25565/tcp": []nat.PortBinding{
 					{
 						HostIP:   "0.0.0.0",
-						HostPort: fmt.Sprintf("%d", b.portCounter),
+						HostPort: fmt.Sprintf("%d", port),
 					},
 				},
 			},
 			RestartPolicy: container.RestartPolicy{
 				Name: "unless-stopped",
+			},
+			Resources: container.Resources{
+				Memory: buildStrategy.GetResourceSettings().MemoryLimit,
+				NanoCPUs: buildStrategy.GetResourceSettings().CPULimit,
 			},
 		},
 		&network.NetworkingConfig{},
@@ -124,9 +133,6 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	}
 	builderLogger.Info("✅ Minecraft server is ready and accepting connections!")
 
-	// Increment port counter for next server (if implementing multiple servers in future)
-	b.portCounter++
-
 	return nil
 }
 
@@ -163,6 +169,13 @@ func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileConten
 		"plan_type", serverData.ServerConfig.PlanType,
 		"image", serverData.ImageName,
 	)
+
+	lockInterface, _ := b.imageBuildLocks.LoadOrStore(serverData.ImageName, &sync.Mutex{})
+	imageLock := lockInterface.(*sync.Mutex)
+
+	imageLock.Lock()
+	defer imageLock.Unlock()
+
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(config.WorkerEnvs.DockerHost),
 	)

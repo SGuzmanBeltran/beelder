@@ -8,9 +8,9 @@ import (
 )
 
 type BuilderConfig struct {
-	MaxConcurrentBuilds int `json:"max_concurrent_builds"`
-	MaxAliveServers    	int `json:"max_alive_servers"`
-	BuildTimeout        int `json:"timeout_seconds"`
+	MaxConcurrentBuilds int32 `json:"max_concurrent_builds"`
+	MaxAliveServers    	int32 `json:"max_alive_servers"`
+	BuildTimeout        int32 `json:"timeout_seconds"`
 }
 
 type WorkerConfig struct {
