@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,12 +18,12 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/google/uuid"
 )
 
 type Builder struct{
 	healthChecker *HealthChecker
 	portCounter int
+	logger *slog.Logger
 }
 
 func NewBuilder() *Builder {
@@ -30,20 +31,26 @@ func NewBuilder() *Builder {
 	return &Builder{
 		healthChecker: healthChecker,
 		portCounter: 25565,
+		logger:  slog.Default().With("component", "builder"),
 	}
 }
 
-func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
-    ctx := context.Background()
+func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) error {
 
-    imageName := fmt.Sprintf("ms-%s-%s:latest", serverConfig.ServerType, serverConfig.PlanType)
-
+    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType)
+	serverData.ImageName = imageName
+	builderLogger := b.logger.With(
+		"server_id", serverData.ServerID,
+		"server_type", serverData.ServerConfig.ServerType,
+		"plan_type", serverData.ServerConfig.PlanType,
+		"image", imageName,
+	)
     // Strategy now handles everything including memory
     strategyFactory := &DefaultStrategyFactory{}
-    buildStrategy := strategyFactory.GetStrategy(serverConfig)
-    dockerfile := buildStrategy.GenerateDockerfile(serverConfig)
+    buildStrategy := strategyFactory.GetStrategy(serverData.ServerConfig)
+    dockerfile := buildStrategy.GenerateDockerfile(serverData.ServerConfig)
 
-    err := b.buildImageFromDockerfile(dockerfile, imageName, serverConfig)
+    err := b.buildImageFromDockerfile(ctx, dockerfile, serverData)
 
 	if err != nil {
 		return err
@@ -53,12 +60,12 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to new client: %w", err)
 	}
 	defer cli.Close()
 
 	// Create container with restart policy
-	fmt.Println("Creating container...")
+	builderLogger.Info("Creating container...")
 	resp, err := cli.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -82,31 +89,34 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 		},
 		&network.NetworkingConfig{},
 		nil,
-		fmt.Sprintf("ms-%s-%s-%s", serverConfig.ServerType, serverConfig.PlanType, uuid.New().String()),
+		fmt.Sprintf("ms-%s-%s-%s", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType, serverData.ServerID),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create container: %w", err)
 	}
 
-	fmt.Println("Container created with ID:", resp.ID)
+	builderLogger.Info("Container created", "ID", resp.ID)
+
 	// Start container
 	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return err
+		return fmt.Errorf("failed to start container: %w", err)
 	}
-	fmt.Printf("Minecraft server started in background with ID: %s\n", resp.ID)
-	fmt.Println("Connect to the server at localhost:25565")
-	fmt.Printf("To view logs: docker logs -f %s\n", resp.ID)
-	fmt.Printf("To stop: docker stop %s\n", resp.ID)
+	builderLogger.Info("Minecraft server started in background", "ID", resp.ID)
+	builderLogger.Info("Connect to the server at localhost:25565")
+	builderLogger.Info("To view logs: docker logs -f " + resp.ID)
+	builderLogger.Info("To stop: docker stop " + resp.ID)
 
 	// Health check: verify if the Minecraft server is responding on TCP port 25565
-	fmt.Println("Checking if Minecraft server is responding...")
+	builderLogger.Info("Checking if Minecraft server is responding...")
 
-	if err := b.healthChecker.waitForServerReady(resp.ID, 120*time.Second); err != nil {
-		fmt.Printf("Warning: Server health check failed: %v\n", err)
-		fmt.Println("The server might still be starting up. Check logs with: docker logs -f", resp.ID)
-	} else {
-		fmt.Println("✅ Minecraft server is ready and accepting connections!")
+	if err := b.healthChecker.waitForServerReady(resp.ID, 120*time.Second, serverData); err != nil {
+		builderLogger.Warn("Server health check failed", "error", err)
+		builderLogger.Warn("The server might still be starting up. Check logs with: docker logs -f " + resp.ID)
+
+		//todo: handle failure (e.g., stop and remove container)
+		return err
 	}
+	builderLogger.Info("✅ Minecraft server is ready and accepting connections!")
 
 	// Increment port counter for next server (if implementing multiple servers in future)
 	b.portCounter++
@@ -115,48 +125,53 @@ func (b *Builder) BuildServer(serverConfig *types.CreateServerConfig) error {
 }
 
 // buildImageFromDockerfile builds a Docker image from Dockerfile content (string) with the specified image name.
-func (b *Builder) buildImageFromDockerfile(dockerfileContent string, imageName string, serverConfig *types.CreateServerConfig) error {
-	ctx := context.Background()
+func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileContent string, serverData *types.CreateServerData) error {
+	builderLogger := b.logger.With(
+		"server_id", serverData.ServerID,
+		"server_type", serverData.ServerConfig.ServerType,
+		"plan_type", serverData.ServerConfig.PlanType,
+		"image", serverData.ImageName,
+	)
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to new client: %w", err)
 	}
 	defer cli.Close()
 
 	// Check if image already exists
-	_, err = cli.ImageInspect(ctx, imageName)
+	_, err = cli.ImageInspect(ctx, serverData.ImageName)
 	if err == nil {
-		fmt.Printf("Image %s already exists, skipping build\n", imageName)
+		builderLogger.Info("Image already exists, skipping build")
 		return nil
 	}
 
-	fmt.Printf("Image %s not found, building...\n", imageName)
+	builderLogger.Info("Image not found, building...")
 
 	// Create build context
-	buildContext, err := createBuildContext(dockerfileContent, serverConfig.ServerType)
+	buildContext, err := createBuildContext(dockerfileContent, serverData.ServerConfig.ServerType)
 	if err != nil {
 		return err
 	}
 
 	// Build the Docker image
 	buildOptions := build.ImageBuildOptions{
-		Tags:       []string{imageName},
+		Tags:       []string{serverData.ImageName},
 		Dockerfile: "Dockerfile",
 		Remove:     true,
 	}
 
 	buildResp, err := cli.ImageBuild(ctx, buildContext, buildOptions)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build image: %w", err)
 	}
 	defer buildResp.Body.Close()
 
 	// Optionally, print build output
 	_, err = io.Copy(os.Stdout, buildResp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read build output: %w", err)
 	}
 
 	return nil
@@ -169,7 +184,7 @@ func createBuildContext(dockerfileContent string, serverType string) (io.Reader,
 	defer tw.Close()
 	// Add Dockerfile
 	if err := addTarFile(tw, "Dockerfile", []byte(dockerfileContent)); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add Dockerfile to tar: %w", err)
 	}
 
 	// Find project root
@@ -182,11 +197,11 @@ func createBuildContext(dockerfileContent string, serverType string) (io.Reader,
 
 	jarBytes, err := os.ReadFile(jarPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read server jar: %w", err)
 	}
 	// Add to tar with the path expected by Dockerfile
 	if err := addTarFile(tw, fmt.Sprintf("assets/executables/%s.jar", serverType), jarBytes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add server jar to tar: %w", err)
 	}
 	return buf, nil
 }

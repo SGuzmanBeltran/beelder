@@ -1,5 +1,10 @@
 package types
 
+type CreateServerData struct {
+	ServerID     string
+	ServerConfig *CreateServerConfig
+	ImageName 	 string
+}
 type CreateServerConfig struct {
 	Name         string `json:"name" validate:"required,min=3,max=64"`
 	ServerType   string `json:"server_type" validate:"required"`

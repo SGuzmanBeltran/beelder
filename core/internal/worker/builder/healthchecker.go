@@ -2,8 +2,10 @@ package builder
 
 import (
 	config "beelder/internal/config/worker"
+	"beelder/internal/types"
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -11,23 +13,34 @@ import (
 	"github.com/docker/docker/client"
 )
 
-type HealthChecker struct{}
+type HealthChecker struct{
+	logger *slog.Logger
+}
 
 func NewHealthChecker() *HealthChecker {
-	return &HealthChecker{}
+	return &HealthChecker{
+		logger: slog.Default().With("component", "healthchecker"),
+	}
 }
 
 // waitForServerReady checks if the Minecraft server is actually ready to accept players
 // It does this by monitoring the container logs for the "Done" message that indicates server readiness
-func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Duration) error {
-	fmt.Printf("Waiting for Minecraft server to be ready (timeout: %v)...\n", timeout)
+func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Duration, serverData *types.CreateServerData) error {
+	healthCheckerLogger := hc.logger.With(
+		"server_id", serverData.ServerID,
+		"server_type", serverData.ServerConfig.ServerType,
+		"plan_type", serverData.ServerConfig.PlanType,
+		"image", serverData.ImageName,
+		"container_id", containerID,
+	)
+	healthCheckerLogger.Info("Starting health check for Minecraft server", "container_id", containerID)
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to new client for healthcheck: %w", err)
 	}
 	defer cli.Close()
 
@@ -65,12 +78,12 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 		// Debug: print last few lines
 		lines := strings.Split(logString, "\n")
 		if len(lines) > 3 {
-			fmt.Printf("Latest logs: %s\n", strings.Join(lines[len(lines)-4:], "\n"))
+			healthCheckerLogger.Info("Latest logs", "lines", strings.Join(lines[len(lines)-4:], "\n"))
 		}
 
 		// Check for Minecraft server ready indicators
 		if hc.isServerReady(logString) {
-			fmt.Printf("✅ Minecraft server is ready after %v\n", time.Since(start).Round(time.Second))
+			healthCheckerLogger.Info("✅ Minecraft server is ready after", "duration", time.Since(start).Round(time.Second))
 			return nil
 		}
 
@@ -82,7 +95,7 @@ func (hc *HealthChecker) waitForServerReady(containerID string, timeout time.Dur
 		// Show progress every 5 seconds
 		elapsed := time.Since(start)
 		if int(elapsed.Seconds())%5 == 0 {
-			fmt.Printf("⏳ Server starting... (%v elapsed)\n", elapsed.Round(time.Second))
+			healthCheckerLogger.Info("⏳ Server starting...", "elapsed", elapsed.Round(time.Second))
 		}
 
 		time.Sleep(2 * time.Second)

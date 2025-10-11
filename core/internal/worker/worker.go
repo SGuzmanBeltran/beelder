@@ -5,44 +5,58 @@ import (
 	"beelder/internal/types"
 	"beelder/internal/worker/builder"
 	"beelder/pkg/messaging/redpanda"
+	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 )
 
 type Worker struct {
 	builder *builder.Builder
+	logger  *slog.Logger
 }
 
 func NewWorker(builder *builder.Builder) *Worker {
 	return &Worker{
 		builder: builder,
+		logger:  slog.Default().With("component", "worker"),
 	}
 }
 
 func (w *Worker) handleCreateServer(message kafka.Message) error {
-	fmt.Println("Processing message:", string(message.Value))
+	ctx := context.Background()
+	serverId := uuid.New().String()
+	createLogger := w.logger.With(
+		"server_id", serverId,
+	)
+	createLogger.Info("Received create server message", "Value", string(message.Value))
 
-	// Create a pointer to the config struct
-    serverConfig := &types.CreateServerConfig{}
-
-    // Unmarshal JSON into the struct
-    if err := json.Unmarshal(message.Value, serverConfig); err != nil {
-        return fmt.Errorf("failed to unmarshal server config: %w", err)
-    }
-
-	fmt.Printf("Processed config: %+v\n", serverConfig)
-
-	if message.Value == nil {
-		return fmt.Errorf("message value is nil")
+	serverConfig := &types.CreateServerConfig{}
+	if err := json.Unmarshal(message.Value, serverConfig); err != nil {
+		createLogger.Error("Failed to unmarshal server config", "error", err)
+		return err
 	}
 
-    // Pass the config to BuildServer
-    if err := w.builder.BuildServer(serverConfig); err != nil {
-        return fmt.Errorf("failed to build server: %w", err)
-    }
+	createServerData := &types.CreateServerData{
+		ServerID:     serverId,
+		ServerConfig: serverConfig,
+	}
 
+	createLogger = createLogger.With(
+		"server_type", serverConfig.ServerType,
+		"plan_type", serverConfig.PlanType,
+	)
+
+	createLogger.Info("building server")
+	if err := w.builder.BuildServer(ctx, createServerData); err != nil {
+		createLogger.Error("server build failed", "error", err)
+		//todo: handle failure
+		return err
+	}
+
+	createLogger.Info("server created successfully")
 	return nil
 }
 
@@ -56,9 +70,9 @@ func (w *Worker) Start() error {
 	redpandaConsumer.Connect()
 	defer redpandaConsumer.Disconnect()
 
-	fmt.Println("Worker started")
+	w.logger.Info("Worker started and listening for messages")
 	redpandaConsumer.ReadMessage(w.handleCreateServer)
-	fmt.Println("Closing worker")
+	w.logger.Info("Closing worker")
 
 	return nil
 }

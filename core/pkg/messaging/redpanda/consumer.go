@@ -2,12 +2,13 @@ package redpanda
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 )
+
+var logger = slog.Default()
 
 type RedpandaConsumerConfig struct {
 	Brokers []string
@@ -34,34 +35,36 @@ func (rc *RedpandaConsumer) Connect() {
 		CommitInterval: time.Second,
 	})
 
-	fmt.Println("Connected to Redpanda")
+	logger.Info("Connected to Redpanda")
 }
 
 func (rc *RedpandaConsumer) Disconnect() {
 	if err := rc.reader.Close(); err != nil {
-		log.Println("Error closing reader:", err)
+		logger.Error("Error closing reader", "error", err)
 	} else {
-		fmt.Println("Reader closed")
+		logger.Info("Reader closed")
 	}
 }
 
-func (rc *RedpandaConsumer) ReadMessage(callback func(kafka.Message) error) {
+func (rc *RedpandaConsumer) ReadMessage(callback func(kafka.Message) error) error {
 	ctx := context.Background()
 	for {
 		m, err := rc.reader.FetchMessage(ctx)
 		if err != nil {
-			fmt.Println("Error reading message:", err)
+			logger.Error("Error reading message", "error", err)
 		}
-		fmt.Printf("message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+
+		logger.Info("Message received", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset, "key", string(m.Key), "value", string(m.Value))
 
 		if err := callback(m); err != nil {
-			log.Println("processing failed, not committing offset:", err)
+			logger.Error("processing failed, not committing offset", "error", err)
 			// optionally push to DLQ or backoff, then continue
 			continue
 		}
 
 		if err := rc.reader.CommitMessages(ctx, m); err != nil {
-			log.Fatal("failed to commit messages:", err)
+			logger.Error("failed to commit messages", "error", err)
+			return err
 		}
 	}
 }
