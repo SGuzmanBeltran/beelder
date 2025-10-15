@@ -39,7 +39,7 @@ creation.
     - [x] Receive the configuration in the broker consumer
 2. [x] Create the server based on configuration.
 3. [x] Create the server using different strategies (Server types like Paper, Forge, Fabric).
-4. [ ] Creating a server is a concurrent service where max 3 server can be created at a time. Max 5 servers.
-5. [ ] Communicate the server creation progress using a broker.
+4. [x] Creating a server is a concurrent service where max 3 server can be created at a time. Max 5 servers.
+5. [x] Communicate the server creation progress using a broker.
 6. [x] Refactor server templates to use Strategy Pattern
 7. [ ] Implement a pattern for partition rebalacing and consumion

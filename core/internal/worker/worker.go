@@ -16,15 +16,22 @@ import (
 )
 
 type Worker struct {
+	producer *redpanda.RedpandaProducer
 	builder *builder.Builder
 	logger  *slog.Logger
 	currentServerBuilds 	atomic.Int32
 	currentLiveServers   	atomic.Int32
 }
 
-func NewWorker(builder *builder.Builder) *Worker {
+func NewWorker() *Worker {
+	producer := redpanda.NewRedpandaProducer(&redpanda.RedpandaConfig{
+			Brokers: []string{config.WorkerEnvs.Broker},
+			Topic:   config.WorkerEnvs.ProducerTopic,
+		})
+	producer.Connect()
 	return &Worker{
-		builder: builder,
+		builder: builder.NewBuilder(),
+		producer: producer,
 		logger:  slog.Default().With("component", "worker"),
 	}
 }
@@ -55,6 +62,10 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	serverConfig := &types.CreateServerConfig{}
 	if err := json.Unmarshal(message.Value, serverConfig); err != nil {
 		createLogger.Error("Failed to unmarshal server config", "error", err)
+		w.producer.SendMessage(kafka.Message{
+			Key:   []byte("server.create.failed"),
+			Value: []byte(err.Error()),
+		})
 		return true, err
 	}
 
@@ -71,11 +82,19 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	createLogger.Info("building server")
 	if err := w.builder.BuildServer(ctx, createServerData); err != nil {
 		createLogger.Error("server build failed", "error", err)
+		w.producer.SendMessage(kafka.Message{
+			Key:   []byte("server.create.failed"),
+			Value: []byte(err.Error()),
+		})
 		return true, err
 	}
 
 	w.currentLiveServers.Add(1)
 	createLogger.Info("server created successfully")
+	w.producer.SendMessage(kafka.Message{
+		Key:   []byte("server.create.success"),
+		Value: []byte("Server created successfully"),
+	})
 	return true, nil
 }
 

@@ -28,6 +28,7 @@ func (rp *RedpandaProducer) Connect() {
 		Addr:     kafka.TCP(rp.config.Brokers...),
 		Topic:    rp.config.Topic,
 		Balancer: &kafka.LeastBytes{},
+		AllowAutoTopicCreation: true,
 	}
 	fmt.Println("Connected to Redpanda")
 }
