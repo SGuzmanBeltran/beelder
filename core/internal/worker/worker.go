@@ -15,6 +15,8 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// Worker represents a worker that processes messages from a message broker,
+// builds servers, and manages concurrency limits.
 type Worker struct {
 	producer *redpanda.RedpandaProducer
 	builder *builder.Builder
@@ -23,6 +25,7 @@ type Worker struct {
 	currentLiveServers   	atomic.Int32
 }
 
+// NewWorker creates and returns a new Worker instance with initialized components.
 func NewWorker() *Worker {
 	producer := redpanda.NewRedpandaProducer(&redpanda.RedpandaConfig{
 			Brokers: []string{config.WorkerEnvs.Broker},
@@ -36,6 +39,10 @@ func NewWorker() *Worker {
 	}
 }
 
+// handleCreateServer processes a "server.create" message.
+// It checks for concurrency limits, builds the server, and sends success or failure messages.
+//
+// Returns a boolean indicating whether the message should be commited or not and an error if any occurred.
 func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	if w.currentServerBuilds.Load() >= config.WorkerEnvs.BuilderConfig.MaxConcurrentBuilds {
 		w.logger.Warn("Max concurrent server builds reached, skipping message")
@@ -98,6 +105,8 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	return true, nil
 }
 
+// handleMessage processes incoming Kafka messages and routes them to the appropriate handler based on the message key.
+// It returns a boolean indicating whether the message should be committed or not and an error if any occurred.
 func (w *Worker) handleMessage(message kafka.Message) (bool, error) {
 	// Implement the logic to handle incoming messages
 	w.logger.Info("Received message", "Value", string(message.Value))
@@ -113,6 +122,7 @@ func (w *Worker) handleMessage(message kafka.Message) (bool, error) {
 	return true, nil
 }
 
+// Start initializes the worker, connects to the message broker, and begins processing messages.
 func (w *Worker) Start() error {
 	// Implement the logic to start the worker
 	redpandaConsumer := redpanda.NewRedpandaConsumer(&redpanda.RedpandaConsumerConfig{

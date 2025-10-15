@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,6 +23,50 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+const (
+	initialPort = 25565
+)
+
+// validateServerConfig checks if the server configuration is valid before building.
+// Returns an error if any required fields are missing or invalid.
+func validateServerConfig(config *types.CreateServerConfig) error {
+	if config.Name == "" {
+		return fmt.Errorf("server name cannot be empty")
+	}
+
+	if config.ServerType == "" {
+		return fmt.Errorf("server type cannot be empty")
+	}
+
+	validTypes := []string{"paper", "forge", "fabric"}
+	if !contains(validTypes, config.ServerType) {
+		return fmt.Errorf("invalid server type: %s (must be one of %v)", config.ServerType, validTypes)
+	}
+
+	if config.PlanType == "" {
+		return fmt.Errorf("plan type cannot be empty")
+	}
+
+	validPlans := []string{"free", "budget", "premium"}
+	if !contains(validPlans, config.PlanType) {
+		return fmt.Errorf("invalid plan type: %s (must be one of %v)", config.PlanType, validPlans)
+	}
+
+	return nil
+}
+
+// contains checks if a string slice contains a specific item.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if strings.Contains(s, item) {
+			return true
+		}
+	}
+	return false
+}
+
+// Builder handles the creation and deployment of Minecraft servers using Docker.
+// It manages the entire lifecycle from Dockerfile generation to container health checks.
 type Builder struct{
 	healthChecker *HealthChecker
 	portCounter atomic.Int32
@@ -29,17 +74,27 @@ type Builder struct{
 	imageBuildLocks sync.Map
 }
 
+// NewBuilder initializes and returns a new Builder instance.
 func NewBuilder() *Builder {
 	healthChecker := NewHealthChecker()
 	builder := &Builder{
 		healthChecker: healthChecker,
 		logger:  slog.Default().With("component", "builder"),
 	}
-	builder.portCounter.Store(25565)
+	builder.portCounter.Store(initialPort)
 	return builder
 }
 
+// BuildServer creates and starts a new Minecraft server container.
+// It generates the appropriate Dockerfile, builds the image, creates the container,
+// and performs health checks before returning.
+//
+// Returns an error if any step fails.
 func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) error {
+    // Validate configuration before starting build
+    if err := validateServerConfig(serverData.ServerConfig); err != nil {
+        return fmt.Errorf("invalid server configuration: %w", err)
+    }
 
     imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType)
 	serverData.ImageName = imageName
@@ -136,6 +191,9 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	return nil
 }
 
+// DestroyServer stops and removes a Docker container by its ID.
+// It forcefully removes the container if it's running.
+// Returns an error if the removal fails.
 func (b *Builder) DestroyServer(ctx context.Context, containerID string) error {
 	builderLogger := b.logger.With(
 		"action", "destroy_server",

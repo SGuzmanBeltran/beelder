@@ -19,6 +19,9 @@ type ResourceSettings struct {
 	MemoryLimit int64
 	CPULimit    int64
 }
+const (
+	OneMB = 1024 * 1024
+)
 
 // GetResourceSettings returns resource settings based on plan type and server type
 func GetResourceSettings(planType string, serverType string) *ResourceSettings {
@@ -30,14 +33,14 @@ func GetResourceSettings(planType string, serverType string) *ResourceSettings {
 			return &ResourceSettings{
 				MemoryMin:   "1G",
 				MemoryMax:   "2G",
-				MemoryLimit: 2560 * 1024 * 1024, // 2.5GB
+				MemoryLimit: 2560 * OneMB, // 2.5GB
 				CPULimit:    1e9,
 			}
 		}
 		return &ResourceSettings{
 			MemoryMin:   "512M",
 			MemoryMax:   "1G",
-			MemoryLimit: 1536 * 1024 * 1024, // 1.5GB
+			MemoryLimit: 1536 * OneMB, // 1.5GB
 			CPULimit:    1e9,
 		}
 	case "premium":
@@ -45,14 +48,14 @@ func GetResourceSettings(planType string, serverType string) *ResourceSettings {
 			return &ResourceSettings{
 				MemoryMin:   "2G",
 				MemoryMax:   "4G",
-				MemoryLimit: 5 * 1024 * 1024 * 1024, // 5GB
+				MemoryLimit: 5 * OneMB * 1024, // 5GB
 				CPULimit:    2e9,
 			}
 		}
 		return &ResourceSettings{
 			MemoryMin:   "1G",
 			MemoryMax:   "2G",
-			MemoryLimit: 2560 * 1024 * 1024, // 2.5GB
+			MemoryLimit: 2560 * OneMB, // 2.5GB
 			CPULimit:    2e9,
 		}
 	default: // free
@@ -60,14 +63,14 @@ func GetResourceSettings(planType string, serverType string) *ResourceSettings {
 			return &ResourceSettings{
 				MemoryMin:   "512M",
 				MemoryMax:   "1G",
-				MemoryLimit: 1536 * 1024 * 1024, // 1.5GB
+				MemoryLimit: 1536 * OneMB, // 1.5GB
 				CPULimit:    5e8,
 			}
 		}
 		return &ResourceSettings{
 			MemoryMin:   "512M",
 			MemoryMax:   "800M",
-			MemoryLimit: 1024 * 1024 * 1024, // 1GB
+			MemoryLimit: OneMB * 1024, // 1GB
 			CPULimit:    5e8,
 		}
 	}
