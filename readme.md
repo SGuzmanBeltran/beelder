@@ -42,3 +42,19 @@ creation.
 4. [x] Creating a server is a concurrent service where max 3 server can be created at a time. Max 5 servers.
 5. [x] Communicate the server creation progress using a broker.
 6. [x] Refactor server templates to use Strategy Pattern
+
+## Architecture
+
+![Beelder Architecture](docs/images/architecture.png)
+
+**Flow:**
+1. Client sends server creation request to API
+2. API validates and publishes to Kafka
+3. Worker consumes message and begins provisioning
+4. Worker builds and deploys Docker container
+5. Worker performs health checks
+6. Worker publishes status updates to Kafka
+7. Event Emitter broadcasts to connected clients
+8. Client receives real-time status updates
+
+For detailed component responsibilities, see [ARCHITECTURE.md](ARCHITECTURE.md).
