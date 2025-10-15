@@ -1,6 +1,57 @@
 # Beelder
-The Beelder platform is a project that tries to replicate a minecraft server platform, this is a learning project using Go to manage minecraft servers as a platform.
 
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Required-2496ED?style=flat&logo=docker)](https://www.docker.com/)
+[![Kafka](https://img.shields.io/badge/Kafka-RedPanda-FF6600?style=flat&logo=apache-kafka)](https://redpanda.com/)
+
+> A learning project that replicates a Minecraft server platform using Go, demonstrating event-driven architecture, containerization, and the Strategy pattern.
+
+---
+
+## 🚀 Features
+
+- **Dynamic Server Provisioning** - Create Minecraft servers on-demand
+- **Multi-Type Support** - Paper, Forge, and Fabric servers via Strategy Pattern
+- **Real-Time Updates** - SSE-based status notifications
+- **Event-Driven Architecture** - Kafka/RedPanda for async processing
+- **Docker Isolation** - Each server runs in its own container
+- **Concurrent Builds** - Up to 3 servers building simultaneously
+- **Plan-Based Resources** - Free, Budget, and Premium tiers
+
+---
+
+## 📋 Quick Start
+
+### Prerequisites
+
+```bash
+# Required
+- Go 1.21+
+- Docker
+- RedPanda (Kafka-compatible)
+```
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/SGuzmanBeltran/beelder.git
+cd beelder
+
+# Start dependencies (Kafka/RedPanda)
+docker-compose up -d
+
+# Run API server
+cd core/cmd/api
+go run main.go
+
+# Run Worker (in another terminal)
+cd core/cmd/worker
+go run main.go
+```
+
+---
 
 ### Slices
 #### First slice
@@ -45,7 +96,7 @@ creation.
 
 ## Architecture
 
-![Beelder Architecture](docs/images/architecture.png)
+![Beelder Architecture](docs/images/architecture-1.png)
 
 **Flow:**
 1. Client sends server creation request to API

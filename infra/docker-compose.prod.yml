@@ -29,16 +29,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  # NATS Service
-  nats:
-    image: nats:latest
-    container_name: nats
-    ports:
-      - "4222:4222"  # NATS messaging port
-      - "8222:8222"  # NATS monitoring port
-    healthcheck:
-      test: ["CMD", "nats-server", "--version"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
