@@ -100,13 +100,14 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	)
 
 	createLogger.Info("building server")
-	if err := w.builder.BuildServer(ctx, createServerData); err != nil {
+	if err, stage := w.builder.BuildServer(ctx, createServerData); err != nil {
 		createLogger.Error("server build failed", "error", err)
 		w.producer.SendJsonMessage(
 			"server.create.failed",
 			map[string]string{
 				"error": "Failed to build server: " + err.Error(),
 				"status": "error",
+				"stage": stage,
 				"server_id": serverId,
 			},
 		)

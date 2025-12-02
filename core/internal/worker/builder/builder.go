@@ -93,10 +93,10 @@ func NewBuilder(producer *redpanda.RedpandaProducer) *Builder {
 // and performs health checks before returning.
 //
 // Returns an error if any step fails.
-func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) error {
+func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) (error, string) {
     // Validate configuration before starting build
     if err := validateServerConfig(serverData.ServerConfig); err != nil {
-        return fmt.Errorf("invalid server configuration: %w", err)
+        return fmt.Errorf("invalid server configuration: %w", err), "validating_configuration"
     }
 
     imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType)
@@ -113,23 +113,41 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
     buildStrategy := strategyFactory.GetStrategy(serverData.ServerConfig)
     dockerfile := buildStrategy.GenerateDockerfile(serverData.ServerConfig)
 
+	b.producer.SendJsonMessage(
+		"server.build.building",
+		map[string]string{
+			"message": "Building server image",
+			"status": "building_image",
+			"server_id": serverData.ServerID,
+		},
+	)
+
     err := b.buildImageFromDockerfile(ctx, dockerfile, serverData)
 
 	if err != nil {
-		return err
+		return err, "building_image"
 	}
 
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(config.WorkerEnvs.DockerHost),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to connect to new client: %w", err)
+		return fmt.Errorf("failed to connect to new client: %w", err), "connecting_docker_client"
 	}
 	defer cli.Close()
 
 	port := b.portCounter.Add(1) - 1
 	// Create container with restart policy
 	builderLogger.Info("Creating container...")
+	b.producer.SendJsonMessage(
+		"server.build.building",
+		map[string]string{
+			"message": "Building server...",
+			"status": "building",
+			"stage": "server_creation",
+			"server_id": serverData.ServerID,
+		},
+	)
 	resp, err := cli.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -160,7 +178,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 		fmt.Sprintf("ms-%s-%s-%s", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType, serverData.ServerID),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create container: %w", err)
+		return fmt.Errorf("failed to create container: %w", err), "creating_container"
 	}
 
 	serverData.ContainerID = resp.ID
@@ -168,8 +186,17 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	builderLogger.Info("Container created", "ID", resp.ID)
 
 	// Start container
+	b.producer.SendJsonMessage(
+		"server.build.building",
+		map[string]string{
+			"message": "Starting server...",
+			"status": "building",
+			"stage": "starting",
+			"server_id": serverData.ServerID,
+		},
+	)
 	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return fmt.Errorf("failed to start container: %w", err)
+		return fmt.Errorf("failed to start container: %w", err), "starting_container"
 	}
 	builderLogger.Info("Minecraft server started in background", "ID", resp.ID)
 	builderLogger.Info("Connect to the server at localhost:25565")
@@ -179,19 +206,29 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	// Health check: verify if the Minecraft server is responding on TCP port 25565
 	builderLogger.Info("Checking if Minecraft server is responding...")
 
+	b.producer.SendJsonMessage(
+		"server.build.building",
+		map[string]string{
+			"message": "Checking server health...",
+			"status": "building",
+			"stage": "health_checking",
+			"server_id": serverData.ServerID,
+		},
+	)
+
 	if err := b.healthChecker.waitForServerReady(resp.ID, serverData); err != nil {
 		builderLogger.Error("health check failed, rolling back", "error", err)
 
 		if removeErr := b.DestroyServer(ctx, serverData.ContainerID); removeErr != nil {
-			return fmt.Errorf("health check failed and rollback failed: health_error=%w, remove_error=%v", err, removeErr)
+			return fmt.Errorf("health check failed and rollback failed: health_error=%w, remove_error=%v", err, removeErr), "health_checking"
 		}
 
 		builderLogger.Info("unhealthy container removed", "container_id", resp.ID[:12])
-		return fmt.Errorf("health check failed for server %s: %w", serverData.ServerConfig.Name, err)
+		return fmt.Errorf("health check failed for server %s: %w", serverData.ServerConfig.Name, err), "health_checking"
 	}
 	builderLogger.Info("✅ Minecraft server is ready and accepting connections!")
 
-	return nil
+	return nil, "ready"
 }
 
 // DestroyServer stops and removes a Docker container by its ID.
