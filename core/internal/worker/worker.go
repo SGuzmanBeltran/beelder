@@ -18,24 +18,24 @@ import (
 // Worker represents a worker that processes messages from a message broker,
 // builds servers, and manages concurrency limits.
 type Worker struct {
-	producer *redpanda.RedpandaProducer
-	builder *builder.Builder
-	logger  *slog.Logger
-	currentServerBuilds 	atomic.Int32
-	currentLiveServers   	atomic.Int32
+	producer            *redpanda.RedpandaProducer
+	builder             *builder.Builder
+	logger              *slog.Logger
+	currentServerBuilds atomic.Int32
+	currentLiveServers  atomic.Int32
 }
 
 // NewWorker creates and returns a new Worker instance with initialized components.
 func NewWorker() *Worker {
 	producer := redpanda.NewRedpandaProducer(&redpanda.RedpandaConfig{
-			Brokers: []string{config.WorkerEnvs.Broker},
-			Topic:   config.WorkerEnvs.ProducerTopic,
-		})
+		Brokers: []string{config.WorkerEnvs.Broker},
+		Topic:   config.WorkerEnvs.ProducerTopic,
+	})
 	producer.Connect()
 	return &Worker{
-		builder: builder.NewBuilder(),
+		builder:  builder.NewBuilder(producer),
 		producer: producer,
-		logger:  slog.Default().With("component", "worker"),
+		logger:   slog.Default().With("component", "worker"),
 	}
 }
 
@@ -46,13 +46,13 @@ func NewWorker() *Worker {
 func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	if w.currentServerBuilds.Load() >= config.WorkerEnvs.BuilderConfig.MaxConcurrentBuilds {
 		w.logger.Warn("Max concurrent server builds reached, skipping message")
-		time.Sleep(5 * time.Second)  // Wait before retrying
+		time.Sleep(5 * time.Second) // Wait before retrying
 		return false, nil
 	}
 
 	if w.currentLiveServers.Load() >= config.WorkerEnvs.BuilderConfig.MaxAliveServers {
 		w.logger.Warn("Max alive servers reached, skipping message")
-		time.Sleep(5 * time.Second)  // Wait before retrying
+		time.Sleep(5 * time.Second) // Wait before retrying
 		return false, nil
 	}
 
@@ -66,13 +66,26 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	)
 	createLogger.Info("Received create server message", "Value", string(message.Value))
 
+	w.producer.SendJsonMessage(
+		"server.create.started",
+		map[string]string{
+			"message": "Server creation started",
+			"status": "building",
+			"server_id": serverId,
+		},
+	)
+
 	serverConfig := &types.CreateServerConfig{}
 	if err := json.Unmarshal(message.Value, serverConfig); err != nil {
 		createLogger.Error("Failed to unmarshal server config", "error", err)
-		w.producer.SendMessage(kafka.Message{
-			Key:   []byte("server.create.failed"),
-			Value: []byte(err.Error()),
-		})
+		w.producer.SendJsonMessage(
+			"server.create.failed",
+			map[string]string{
+				"error": "Failed to load server config",
+				"status": "error",
+				"server_id": serverId,
+			},
+		)
 		return true, err
 	}
 
@@ -89,19 +102,27 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	createLogger.Info("building server")
 	if err := w.builder.BuildServer(ctx, createServerData); err != nil {
 		createLogger.Error("server build failed", "error", err)
-		w.producer.SendMessage(kafka.Message{
-			Key:   []byte("server.create.failed"),
-			Value: []byte(err.Error()),
-		})
+		w.producer.SendJsonMessage(
+			"server.create.failed",
+			map[string]string{
+				"error": "Failed to build server: " + err.Error(),
+				"status": "error",
+				"server_id": serverId,
+			},
+		)
 		return true, err
 	}
 
 	w.currentLiveServers.Add(1)
 	createLogger.Info("server created successfully")
-	w.producer.SendMessage(kafka.Message{
-		Key:   []byte("server.create.success"),
-		Value: []byte("Server created successfully"),
-	})
+	w.producer.SendJsonMessage(
+		"server.create.success",
+		map[string]string{
+			"message": "Server created successfully",
+			"status": "running",
+			"server_id": serverId,
+		},
+	)
 	return true, nil
 }
 

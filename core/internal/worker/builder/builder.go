@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	config "beelder/internal/config/worker"
 	"beelder/internal/types"
+	"beelder/pkg/messaging/redpanda"
 	"bytes"
 	"context"
 	"fmt"
@@ -69,15 +70,17 @@ func contains(slice []string, item string) bool {
 // It manages the entire lifecycle from Dockerfile generation to container health checks.
 type Builder struct{
 	healthChecker *HealthChecker
+	producer *redpanda.RedpandaProducer
 	portCounter atomic.Int32
 	logger *slog.Logger
 	imageBuildLocks sync.Map
 }
 
 // NewBuilder initializes and returns a new Builder instance.
-func NewBuilder() *Builder {
+func NewBuilder(producer *redpanda.RedpandaProducer) *Builder {
 	healthChecker := NewHealthChecker()
 	builder := &Builder{
+		producer: producer,
 		healthChecker: healthChecker,
 		logger:  slog.Default().With("component", "builder"),
 	}
