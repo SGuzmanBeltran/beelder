@@ -7,6 +7,8 @@ import (
 
 type ApiConfig struct {
 	ServerCommdansTopic string
+	ServerProgressTopic string
+	GroupID             string
 	Broker              string
 }
 
@@ -19,6 +21,8 @@ func initConfig() ApiConfig {
 
 	config := ApiConfig{
 		ServerCommdansTopic: config.GetEnv("SERVER_COMMANDS_TOPIC"),
+		ServerProgressTopic: config.GetEnv("SERVER_PROGRESS_TOPIC"),
+		GroupID:             config.GetEnv("GROUP_ID"),
 		Broker:              config.GetEnv("BROKER"),
 	}
 
