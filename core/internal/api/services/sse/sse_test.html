@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Stream Tester</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.connected {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            gap: 1.5rem;
+            overflow: hidden;
+        }
+
+        .controls {
+            flex-shrink: 0;
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 1rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input {
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            font-family: monospace;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 0.95rem;
+            height: 46px; /* Match input height roughly */
+            align-self: end;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .logs-container {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .logs-header {
+            flex-shrink: 0;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .logs-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .clear-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        #log-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        .log-entry {
+            flex-shrink: 0;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .log-entry::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--border);
+        }
+
+        .log-entry.type-connected::before { background: var(--success); }
+        .log-entry.type-progress::before { background: var(--accent); }
+        .log-entry.type-completed::before { background: var(--success); }
+        .log-entry.type-failed::before { background: var(--error); }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            align-items: center;
+        }
+
+        .event-type {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .log-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .log-content {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .json-key { color: #7dd3fc; }
+        .json-string { color: #86efac; }
+        .json-number { color: #fca5a5; }
+        .json-boolean { color: #f9a8d4; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            Beelder SSE Tester
+        </h1>
+        <div id="connection-status" class="status-badge disconnected">Disconnected</div>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="input-group">
+                <label for="base-url">Base URL</label>
+                <input type="text" id="base-url" value="http://localhost:3000/api/v1" placeholder="e.g. http://localhost:3000/api/v1">
+            </div>
+            <div class="input-group">
+                <label for="server-id">Server ID</label>
+                <input type="text" id="server-id" value="test-server-1" placeholder="UUID or ID">
+            </div>
+            <button id="connect-btn" class="btn btn-primary">Connect</button>
+        </div>
+
+        <div class="logs-container">
+            <div class="logs-header">
+                <span class="logs-title">Event Stream</span>
+                <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+            </div>
+            <div id="log-area">
+                <!-- Logs will appear here -->
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem; font-style: italic; opacity: 0.5;">
+                    Waiting for connection...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let eventSource = null;
+        const connectBtn = document.getElementById('connect-btn');
+        const statusBadge = document.getElementById('connection-status');
+        const logArea = document.getElementById('log-area');
+        const baseUrlInput = document.getElementById('base-url');
+        const serverIdInput = document.getElementById('server-id');
+
+        // Syntax highlighting for JSON
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function addLog(type, data) {
+            // Remove empty state placeholder if it exists
+            if (logArea.children.length === 1 && logArea.children[0].innerText.includes('Waiting for connection')) {
+                logArea.innerHTML = '';
+            }
+
+            const entry = document.createElement('div');
+            entry.className = `log-entry type-${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            
+            let formattedData = data;
+            try {
+                const parsed = JSON.parse(data);
+                formattedData = syntaxHighlight(parsed);
+            } catch (e) {
+                // Not JSON or already object
+                if (typeof data === 'object') {
+                    formattedData = syntaxHighlight(data);
+                }
+            }
+
+            entry.innerHTML = `
+                <div class="log-header">
+                    <span class="event-type">${type}</span>
+                    <span class="log-time">${time}</span>
+                </div>
+                <div class="log-content">${formattedData}</div>
+            `;
+
+            logArea.prepend(entry);
+        }
+
+        function clearLogs() {
+            logArea.innerHTML = `
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem; font-style: italic; opacity: 0.5;">
+                    Logs cleared
+                </div>
+            `;
+        }
+
+        function updateStatus(status) {
+            statusBadge.className = `status-badge ${status}`;
+            statusBadge.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+            
+            if (status === 'connected') {
+                connectBtn.innerText = 'Disconnect';
+                connectBtn.className = 'btn btn-danger';
+                connectBtn.onclick = disconnect;
+                
+                // Disable inputs while connected
+                baseUrlInput.disabled = true;
+                serverIdInput.disabled = true;
+            } else {
+                connectBtn.innerText = 'Connect';
+                connectBtn.className = 'btn btn-primary';
+                connectBtn.onclick = connect;
+                
+                // Enable inputs
+                baseUrlInput.disabled = false;
+                serverIdInput.disabled = false;
+            }
+        }
+
+        function connect() {
+            const baseUrl = baseUrlInput.value.replace(/\/$/, '');
+            const serverId = serverIdInput.value;
+            
+            if (!serverId) {
+                alert('Please enter a Server ID');
+                return;
+            }
+
+            const url = `${baseUrl}/sse_server/${serverId}`;
+            
+            addLog('system', `Connecting to ${url}...`);
+            
+            try {
+                eventSource = new EventSource(url);
+
+                eventSource.onopen = () => {
+                    updateStatus('connected');
+                    addLog('system', 'Connection opened');
+                };
+
+                eventSource.onerror = (err) => {
+                    console.error('EventSource failed:', err);
+                    updateStatus('disconnected');
+                    addLog('error', 'Connection error occurred. Check console for details.');
+                    disconnect();
+                };
+
+                // Listen for specific events
+                eventSource.addEventListener('connected', (e) => {
+                    addLog('connected', e.data);
+                });
+
+                eventSource.addEventListener('progress', (e) => {
+                    addLog('progress', e.data);
+                });
+
+                eventSource.addEventListener('completed', (e) => {
+                    addLog('completed', e.data);
+                    // Optional: auto-disconnect on completion if desired
+                    // disconnect(); 
+                });
+
+                eventSource.addEventListener('failed', (e) => {
+                    addLog('failed', e.data);
+                });
+
+                // Catch-all for other messages
+                eventSource.onmessage = (e) => {
+                    addLog('message', e.data);
+                };
+
+            } catch (e) {
+                addLog('error', `Failed to create EventSource: ${e.message}`);
+                updateStatus('disconnected');
+            }
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                addLog('system', 'Connection closed by user');
+            }
+            updateStatus('disconnected');
+        }
+
+    // Initialize button handler
+    connectBtn.onclick = connect;
+    </script>
+</body>
+</html>

@@ -20,10 +20,10 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization", // Added Authorization
+		AllowOrigins:     "*", //This should be changed to the valid origin
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, Cache-Control, Last-Event-ID", // Added Authorization and Last-Event-ID
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE",
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 
 
@@ -51,16 +51,25 @@ func setupRoutes(app *fiber.App) {
 		Topic:   config.ApiEnvs.ServerCommdansTopic,
 	}
 
+	consumerConfig := &redpanda.RedpandaConsumerConfig{
+		Brokers: []string{config.ApiEnvs.Broker},
+		Topic:   config.ApiEnvs.ServerProgressTopic,
+		GroupID: config.ApiEnvs.GroupID,
+	}
 
 	// Initialize services
 	serverService := services.NewServerService(producerConfig)
+	sse := services.NewSSEService(consumerConfig)
+	sse.Run()
 
 	// Initialize handlers
 	serverHandler := handlers.NewServerHandler(serverService)
+	sseHandler := handlers.NewSSEHandler(sse)
 
 	// Register routes
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
 	serverHandler.RegisterRoutes(v1)
+	sseHandler.RegisterRoutes(v1)
 }
