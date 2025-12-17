@@ -5,6 +5,7 @@ import (
 	"beelder/pkg/messaging/redpanda"
 	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -20,11 +21,12 @@ func NewServerService(brokerConfig *redpanda.RedpandaConfig) *ServerService {
 	}
 }
 
-func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) error {
+func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) (string, error) {
 	// Convert struct to JSON bytes
+	serverId := uuid.New().String()
 	jsonBytes, err := json.Marshal(serverConfig)
     if err != nil {
-        return err
+        return "", err
     }
 
 	// Send message with JSON bytes
@@ -32,5 +34,5 @@ func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) err
 		Key:   []byte("server.create"),
 		Value: jsonBytes,
 	})
-	return nil
+	return serverId, nil
 }

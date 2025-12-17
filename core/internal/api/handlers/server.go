@@ -28,13 +28,17 @@ func (h *ServerHandler) createServer(c *fiber.Ctx) error {
 	// Get the validated config from context
     serverConfig := c.Locals("validated").(*types.CreateServerConfig)
 
-	if err := h.serverService.CreateServer(serverConfig); err != nil {
+	serverId, err := h.serverService.CreateServer(serverConfig)
+
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
         })
 	}
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
         "message": "Server creation started",
         "name": serverConfig.Name,
+		"id": serverId,
     })
 }
