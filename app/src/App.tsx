@@ -1,7 +1,11 @@
-import { ComponentExample } from "@/components/component-example";
+import { Welcome } from "./components/welcome";
 
 export function App() {
-return <ComponentExample />;
+	return (
+		<div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+			<Welcome />
+		</div>
+	);
 }
 
 export default App;
