@@ -7,7 +7,7 @@ interface PricingCardProps {
 	price: string;
 	badge?: {
 		text: string;
-		color: "red" | "green" | "purple" | "stone";
+		color: "red" | "green" | "yellow" | "purple" | "stone";
 	};
 	disabled?: boolean;
 	onSelect?: () => void;
@@ -16,6 +16,7 @@ interface PricingCardProps {
 const badgeColors = {
 	red: "bg-red-900 border-red-900/50",
 	green: "bg-green-600 border-green-500",
+	yellow: "bg-yellow-500 border-yellow-400",
 	purple: "bg-purple-600 border-purple-500",
 	stone: "bg-stone-700 border-stone-700",
 };
@@ -23,6 +24,7 @@ const badgeColors = {
 const cardBorderColors = {
 	red: "border-red-900/50",
 	green: "border-green-500",
+	yellow: "border-yellow-400",
 	purple: "border-purple-500",
 	stone: "border-stone-700",
 };
@@ -34,8 +36,10 @@ export function PricingCard({
 	disabled = false,
 	onSelect,
 }: PricingCardProps) {
-	const borderColor = badge ? cardBorderColors[badge.color] : "border-stone-700";
-	
+	const borderColor = badge
+		? cardBorderColors[badge.color]
+		: "border-stone-700";
+
 	return (
 		<Card
 			className={`relative bg-stone-900 border-2 ${borderColor} overflow-visible min-w-70 shrink-0`}
@@ -44,7 +48,9 @@ export function PricingCard({
 				{badge && (
 					<div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
 						<div
-							className={`${badgeColors[badge.color]} text-white px-4 py-1 rounded-full text-sm font-semibold border-2 whitespace-nowrap`}
+							className={`${
+								badgeColors[badge.color]
+							} text-white px-4 py-1 rounded-full text-sm font-semibold border-2 whitespace-nowrap`}
 						>
 							{badge.text}
 						</div>
@@ -61,7 +67,7 @@ export function PricingCard({
 					className={`w-full text-black ${
 						disabled
 							? "bg-stone-700 hover:bg-stone-600"
-							: "bg-blue-600 hover:bg-blue-700"
+							: "bg-yellow-500 hover:bg-yellow-700"
 					}`}
 					disabled={disabled}
 					onClick={onSelect}

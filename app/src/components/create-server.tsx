@@ -34,7 +34,7 @@ const pricingPlans = [
 	{
 		ram: "6GB",
 		price: "$17.99",
-		badge: { text: "Recommended", color: "green" as const },
+		badge: { text: "Recommended", color: "yellow" as const },
 	},
 	{
 		ram: "8GB",
@@ -206,7 +206,7 @@ export function CreateServer() {
 										onClick={() => setCurrentPlanIndex(index)}
 										className={`w-2 h-2 rounded-full transition-all ${
 											index === currentPlanIndex
-												? "bg-blue-600 w-8"
+												? "bg-yellow-500 w-8"
 												: "bg-stone-600 hover:bg-stone-500"
 										}`}
 										aria-label={`Go to plan ${index + 1}`}
