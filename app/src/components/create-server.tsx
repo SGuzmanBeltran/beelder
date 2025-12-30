@@ -9,6 +9,7 @@ import {
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { PricingCard } from "./pricing-card";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
 
@@ -62,9 +63,29 @@ export function CreateServer() {
 
 							<div className="space-y-3">
 								<h4>This is the recommended configuration for your server</h4>
-								<Card className="w-full bg-stone-800">
-									{/* Show the recommended configuration based on the previous inputs and pricing*/}
-								</Card>
+								<div className="flex gap-4 pt-6 pb-2 -mx-6 px-6 overflow-x-auto">
+									<PricingCard
+										ram="1GB"
+										price="$0.00"
+										badge={{ text: "Free", color: "stone" }}
+									/>
+									<PricingCard
+										ram="2GB"
+										price="$11.99"
+										badge={{ text: "Insufficient RAM", color: "red" }}
+									/>
+									<PricingCard
+										ram="2GB"
+										price="$11.99"
+										badge={{ text: "Insufficient RAM", color: "red" }}
+									/>
+									<PricingCard
+										ram="6GB"
+										price="$17.99"
+										badge={{ text: "Recommended", color: "green" }}
+									/>
+									<PricingCard ram="8GB" price="$23.99" />
+								</div>
 							</div>
 						</CardContent>
 					</Card>
