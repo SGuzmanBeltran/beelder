@@ -15,7 +15,7 @@ import { Switch } from "./ui/switch";
 
 export function CreateServer() {
 	return (
-		<div className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 lg:w-2/3 lg:px-0">
+		<div className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0">
 			<div className="flex w-full justify-start">
 				<h1 className=" text-2xl font-bold">Create your server</h1>
 			</div>
