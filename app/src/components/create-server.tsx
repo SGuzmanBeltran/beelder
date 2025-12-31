@@ -7,6 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { type SubmitHandler, useForm } from "react-hook-form";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Input } from "./ui/input";
@@ -42,6 +43,17 @@ const pricingPlans = [
 	},
 ];
 
+interface ServerConfig {
+	serverType: string;
+	serverVersion: string;
+	playerCount: number;
+	region: string;
+	ramPlan: string;
+	serverName: string;
+	difficulty: string;
+	premiumOnly: boolean;
+}
+
 export function CreateServer() {
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(3); // Start at recommended (6GB)
 
@@ -59,8 +71,27 @@ export function CreateServer() {
 
 	const currentPlan = pricingPlans[currentPlanIndex];
 
+	const {
+		handleSubmit,
+		watch,
+		setValue,
+		formState: { errors },
+	} = useForm<ServerConfig>({
+		defaultValues: {
+			playerCount: 0,
+			premiumOnly: true,
+		},
+	});
+	const onSubmit: SubmitHandler<ServerConfig> = (data) =>
+		console.log("OnSubmit " + JSON.stringify(data));
+
+	console.log(watch());
+
 	return (
-		<div className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0">
+		<form
+			onSubmit={(e) => e.preventDefault()}
+			className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0"
+		>
 			<div className="flex w-full justify-start">
 				<h1 className=" text-2xl font-bold">Create your server</h1>
 			</div>
@@ -72,7 +103,9 @@ export function CreateServer() {
 							<h3 className="text-lg">Configure your installation</h3>
 							<div className="space-y-3">
 								<h4>What should we install on you server?</h4>
-								<Select>
+								<Select
+									onValueChange={(value) => setValue("serverType", value)}
+								>
 									<SelectTrigger className="w-full my-2">
 										<SelectValue placeholder="Select server type" />
 									</SelectTrigger>
@@ -83,7 +116,9 @@ export function CreateServer() {
 									</SelectContent>
 								</Select>
 
-								<Select>
+								<Select
+									onValueChange={(value) => setValue("serverVersion", value)}
+								>
 									<SelectTrigger className="w-full my-2">
 										<SelectValue placeholder="Select server version" />
 									</SelectTrigger>
@@ -100,18 +135,35 @@ export function CreateServer() {
 								</h4>
 								<Slider
 									className="my-2"
+									value={watch("playerCount") ? [watch("playerCount")] : [0]}
+									onValueChange={(value) => setValue("playerCount", value[0])}
 									defaultValue={[0]}
 									max={100}
 									step={1}
 								/>
 							</div>
+							{errors.playerCount && (
+								<p className="text-red-500">
+									{errors.playerCount.message as string}
+								</p>
+							)}
+							{errors.serverType && (
+								<p className="text-red-500">
+									{errors.serverType.message as string}
+								</p>
+							)}
+							{errors.serverVersion && (
+								<p className="text-red-500">
+									{errors.serverVersion.message as string}
+								</p>
+							)}
 						</CardContent>
 					</Card>
 
 					<Card className="w-full">
 						<CardContent className="space-y-3">
 							<h3 className="text-lg">Select your location</h3>
-							<Select>
+							<Select onValueChange={(value) => setValue("region", value)}>
 								<SelectTrigger className="w-full my-2">
 									<SelectValue placeholder="Select a region" />
 								</SelectTrigger>
@@ -137,15 +189,19 @@ export function CreateServer() {
 							<h3 className="text-lg">Add your initial configuration</h3>
 							<div className="space-y-3">
 								<h4>What's your server name?</h4>
-								<Input />
+								<Input
+									onChange={(e) => setValue("serverName", e.target.value)}
+								/>
 							</div>
 
 							<div className="flex justify-between space-x-6">
 								<div className="w-1/2 space-y-3">
 									<h4>What difficulty?</h4>
-									<Select>
+									<Select
+										onValueChange={(value) => setValue("difficulty", value)}
+									>
 										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Theme" />
+											<SelectValue placeholder="Select a difficulty" />
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="peaceful">Peaceful</SelectItem>
@@ -158,7 +214,12 @@ export function CreateServer() {
 								</div>
 								<div className="w-1/2 flex flex-col justify-center space-y-3 md:space-y-1">
 									<h4 className="pb-2">Do we allow only premium player?</h4>
-									<Switch />
+									<Switch
+										checked={watch("premiumOnly") || false}
+										onCheckedChange={(checked) =>
+											setValue("premiumOnly", checked)
+										}
+									/>
 								</div>
 							</div>
 						</CardContent>
@@ -172,6 +233,7 @@ export function CreateServer() {
 							<div className="relative flex items-center justify-center gap-4">
 								{/* Previous Button */}
 								<button
+									type="button"
 									onClick={handlePrevious}
 									className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
 									aria-label="Previous plan"
@@ -185,11 +247,16 @@ export function CreateServer() {
 										ram={currentPlan.ram}
 										price={currentPlan.price}
 										badge={currentPlan.badge}
+										onSelect={() => {
+											console.log("CreateServer onSubmit called");
+											handleSubmit(onSubmit);
+										}}
 									/>
 								</div>
 
 								{/* Next Button */}
 								<button
+									type="button"
 									onClick={handleNext}
 									className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
 									aria-label="Next plan"
@@ -217,6 +284,6 @@ export function CreateServer() {
 					</div>
 				</div>
 			</div>
-		</div>
+		</form>
 	);
 }

@@ -64,13 +64,17 @@ export function PricingCard({
 					<p className="text-sm text-muted-foreground">/ MONTH</p>
 				</div>
 				<Button
+					type="button"
 					className={`w-full text-black ${
 						disabled
 							? "bg-stone-700 hover:bg-stone-600"
 							: "bg-yellow-500 hover:bg-yellow-700"
 					}`}
 					disabled={disabled}
-					onClick={onSelect}
+					onClick={() => {
+						console.log("PricingCard onSelect called");
+						if (onSelect) onSelect();
+					}}
 				>
 					SELECT PLAN
 				</Button>
