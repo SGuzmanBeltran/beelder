@@ -10,7 +10,6 @@ interface PricingCardProps {
 		color: "red" | "green" | "yellow" | "purple" | "stone";
 	};
 	disabled?: boolean;
-	onSelect?: () => void;
 }
 
 const badgeColors = {
@@ -34,7 +33,6 @@ export function PricingCard({
 	price,
 	badge,
 	disabled = false,
-	onSelect,
 }: PricingCardProps) {
 	const borderColor = badge
 		? cardBorderColors[badge.color]
@@ -64,17 +62,13 @@ export function PricingCard({
 					<p className="text-sm text-muted-foreground">/ MONTH</p>
 				</div>
 				<Button
-					type="button"
+					type="submit"
 					className={`w-full text-black ${
 						disabled
 							? "bg-stone-700 hover:bg-stone-600"
 							: "bg-yellow-500 hover:bg-yellow-700"
 					}`}
 					disabled={disabled}
-					onClick={() => {
-						console.log("PricingCard onSelect called");
-						if (onSelect) onSelect();
-					}}
 				>
 					SELECT PLAN
 				</Button>

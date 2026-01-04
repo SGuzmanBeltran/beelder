@@ -1,9 +1,9 @@
 # Tomorrow's Tasks
 
 ## 1. Add Form Validation
-- Install: `bun add react-hook-form zod @hookform/resolvers`
-- Validate required fields (server type, version, region, name)
-- Show errors when user tries to submit
+- Install: `bun add react-hook-form zod @hookform/resolvers` ✅
+- Validate required fields (server type, version, region, name) ✅
+- Show errors when user tries to submit (right now cant submit and see data for some reason) ✅
 
 ## 2. Wire Up Form Logic
 - Connect player count slider → auto-select RAM plan

@@ -7,7 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { type SubmitHandler, useForm } from "react-hook-form";
+import { type SubmitHandler, useForm, type FieldErrors } from "react-hook-form";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Input } from "./ui/input";
@@ -15,6 +15,8 @@ import { PricingCard } from "./pricing-card";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
 import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const pricingPlans = [
 	{
@@ -43,30 +45,47 @@ const pricingPlans = [
 	},
 ];
 
-interface ServerConfig {
-	serverType: string;
-	serverVersion: string;
-	playerCount: number;
-	region: string;
-	ramPlan: string;
-	serverName: string;
-	difficulty: string;
-	premiumOnly: boolean;
-}
+const serverConfigSchema = z.object({
+	serverType: z
+		.string("Server type is required")
+		.min(1, "Server type is required"),
+	serverVersion: z
+		.string("Server version is required")
+		.min(1, "Server version is required"),
+	playerCount: z
+		.number()
+		.min(1, "Player count must be at least 1")
+		.max(100, "Player count cannot exceed 100"),
+	region: z.string("Region is required").min(1, "Region is required"),
+	ramPlan: z.string().min(1, "RAM plan is required"),
+	serverName: z
+		.string("Server name is required")
+		.min(1, "Server name is required"),
+	difficulty: z
+		.string("Difficulty is required")
+		.min(1, "Difficulty is required"),
+	premiumOnly: z.boolean(),
+});
+
+type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export function CreateServer() {
-	const [currentPlanIndex, setCurrentPlanIndex] = useState(3); // Start at recommended (6GB)
+	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
 	const handlePrevious = () => {
-		setCurrentPlanIndex((prev) =>
-			prev > 0 ? prev - 1 : pricingPlans.length - 1
-		);
+		setCurrentPlanIndex((prev) => {
+			const newIndex = prev > 0 ? prev - 1 : pricingPlans.length - 1;
+			setValue("ramPlan", pricingPlans[newIndex].ram);
+			return newIndex;
+		});
 	};
 
 	const handleNext = () => {
-		setCurrentPlanIndex((prev) =>
-			prev < pricingPlans.length - 1 ? prev + 1 : 0
-		);
+		setCurrentPlanIndex((prev) => {
+			const newIndex = prev < pricingPlans.length - 1 ? prev + 1 : 0;
+			setValue("ramPlan", pricingPlans[newIndex].ram);
+			return newIndex;
+		});
 	};
 
 	const currentPlan = pricingPlans[currentPlanIndex];
@@ -77,19 +96,23 @@ export function CreateServer() {
 		setValue,
 		formState: { errors },
 	} = useForm<ServerConfig>({
+		resolver: zodResolver(serverConfigSchema),
 		defaultValues: {
-			playerCount: 0,
+			playerCount: 1,
 			premiumOnly: true,
+			ramPlan: pricingPlans[0].ram,
 		},
 	});
 	const onSubmit: SubmitHandler<ServerConfig> = (data) =>
 		console.log("OnSubmit " + JSON.stringify(data));
 
-	console.log(watch());
+	const onError = (errors: FieldErrors<ServerConfig>) => {
+		console.log("Form Errors: " + JSON.stringify(errors));
+	};
 
 	return (
 		<form
-			onSubmit={(e) => e.preventDefault()}
+			onSubmit={handleSubmit(onSubmit, onError)}
 			className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0"
 		>
 			<div className="flex w-full justify-start">
@@ -116,6 +139,12 @@ export function CreateServer() {
 									</SelectContent>
 								</Select>
 
+								{errors.serverType && (
+									<p className="text-red-500">
+										{errors.serverType.message as string}
+									</p>
+								)}
+
 								<Select
 									onValueChange={(value) => setValue("serverVersion", value)}
 								>
@@ -128,6 +157,11 @@ export function CreateServer() {
 										<SelectItem value="1.21.9">1.21.9</SelectItem>
 									</SelectContent>
 								</Select>
+								{errors.serverVersion && (
+									<p className="text-red-500">
+										{errors.serverVersion.message as string}
+									</p>
+								)}
 							</div>
 							<div className="space-y-3">
 								<h4>
@@ -141,22 +175,12 @@ export function CreateServer() {
 									max={100}
 									step={1}
 								/>
+								{errors.playerCount && (
+									<p className="text-red-500">
+										{errors.playerCount.message as string}
+									</p>
+								)}
 							</div>
-							{errors.playerCount && (
-								<p className="text-red-500">
-									{errors.playerCount.message as string}
-								</p>
-							)}
-							{errors.serverType && (
-								<p className="text-red-500">
-									{errors.serverType.message as string}
-								</p>
-							)}
-							{errors.serverVersion && (
-								<p className="text-red-500">
-									{errors.serverVersion.message as string}
-								</p>
-							)}
 						</CardContent>
 					</Card>
 
@@ -181,6 +205,11 @@ export function CreateServer() {
 									</SelectItem>
 								</SelectContent>
 							</Select>
+							{errors.region && (
+								<p className="text-red-500">
+									{errors.region.message as string}
+								</p>
+							)}
 						</CardContent>
 					</Card>
 
@@ -188,15 +217,20 @@ export function CreateServer() {
 						<CardContent className="space-y-4">
 							<h3 className="text-lg">Add your initial configuration</h3>
 							<div className="space-y-3">
-								<h4>What's your server name?</h4>
+								<h4>Server name</h4>
 								<Input
 									onChange={(e) => setValue("serverName", e.target.value)}
-								/>
+								/>{" "}
+								{errors.serverName && (
+									<p className="text-red-500">
+										{errors.serverName.message as string}
+									</p>
+								)}{" "}
 							</div>
 
 							<div className="flex justify-between space-x-6">
 								<div className="w-1/2 space-y-3">
-									<h4>What difficulty?</h4>
+									<h4>Select difficulty</h4>
 									<Select
 										onValueChange={(value) => setValue("difficulty", value)}
 									>
@@ -210,10 +244,15 @@ export function CreateServer() {
 											<SelectItem value="hard">Hard</SelectItem>
 											<SelectItem value="hardcore">Hardcore</SelectItem>
 										</SelectContent>
-									</Select>
+									</Select>{" "}
+									{errors.difficulty && (
+										<p className="text-red-500">
+											{errors.difficulty.message as string}
+										</p>
+									)}{" "}
 								</div>
 								<div className="w-1/2 flex flex-col justify-center space-y-3 md:space-y-1">
-									<h4 className="pb-2">Do we allow only premium player?</h4>
+									<h4 className="pb-2">Allow only premium players</h4>
 									<Switch
 										checked={watch("premiumOnly") || false}
 										onCheckedChange={(checked) =>
@@ -247,10 +286,6 @@ export function CreateServer() {
 										ram={currentPlan.ram}
 										price={currentPlan.price}
 										badge={currentPlan.badge}
-										onSelect={() => {
-											console.log("CreateServer onSubmit called");
-											handleSubmit(onSubmit);
-										}}
 									/>
 								</div>
 
@@ -270,7 +305,11 @@ export function CreateServer() {
 								{pricingPlans.map((_, index) => (
 									<button
 										key={index}
-										onClick={() => setCurrentPlanIndex(index)}
+										type="button"
+										onClick={() => {
+											setCurrentPlanIndex(index);
+											setValue("ramPlan", pricingPlans[index].ram);
+										}}
 										className={`w-2 h-2 rounded-full transition-all ${
 											index === currentPlanIndex
 												? "bg-yellow-500 w-8"
