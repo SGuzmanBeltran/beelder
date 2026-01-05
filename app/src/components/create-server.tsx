@@ -73,6 +73,7 @@ type ServerConfig = z.infer<typeof serverConfigSchema>;
 export function CreateServer() {
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+	const [recommendedPlan, setRecommendedPlan] = useState<number | null>(null);
 
 	const handlePrevious = () => {
 		setCurrentPlanIndex((prev) => {
@@ -118,6 +119,7 @@ export function CreateServer() {
 			if (planIndex !== -1 && planIndex !== 0) {
 				// Don't auto-select free plan
 				setCurrentPlanIndex(planIndex);
+				setRecommendedPlan(planIndex);
 				setValue("ramPlan", pricingPlans[planIndex].ram);
 			}
 		} catch (error) {
@@ -177,8 +179,12 @@ export function CreateServer() {
 	const getCurrentPlanBadge = () => {
 		if (currentPlanIndex === 0) {
 			return { text: "Free", color: "stone" as const };
+		} else if (currentPlanIndex === recommendedPlan) {
+			return { text: "Recommended", color: "yellow" as const };
+		} else if (recommendedPlan && currentPlanIndex < recommendedPlan) {
+			return { text: "Not enough RAM", color: "red" as const };
 		}
-		// You can add logic here based on recommendation from backend
+
 		return undefined;
 	};
 
