@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: /srv/apps/beelder/production/core
-      dockerfile: Dockerfile
+      dockerfile: build/Dockerfile.api
     image: beelder-api:latest
     container_name: beelder-api
     ports:
@@ -15,6 +15,26 @@ services:
       - SERVER_COMMANDS_TOPIC=beelder.server.commands
       - SERVER_PROGRESS_TOPIC=beelder.server.progress
       - GROUP_ID=beelder.api.group
+      - BROKER=redpanda:9092
+
+  worker:
+    build:
+      context: /srv/apps/beelder/production/core
+      dockerfile: build/Dockerfile.worker
+    image: beelder-worker:latest
+    container_name: beelder-worker
+    restart: unless-stopped
+    networks:
+      - beelder-network
+      - infra-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CONSUMER_TOPIC=beelder.server.commands
+      - PRODUCER_TOPIC=beelder.server.progress
+      - GROUP_ID=beelder.worker.group
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - BUILDER_CONFIG={"max_concurrent_builds":3, "max_alive_servers":5, "timeout_seconds":120}
       - BROKER=redpanda:9092
 
   app:

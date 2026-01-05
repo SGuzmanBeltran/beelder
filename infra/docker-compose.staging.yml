@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: /srv/apps/beelder/staging/core
-      dockerfile: Dockerfile
+      dockerfile: build/Dockerfile.api
     image: beelder-staging-api:latest
     container_name: beelder-staging-api
     ports:
@@ -15,6 +15,26 @@ services:
       - SERVER_COMMANDS_TOPIC=beelder.staging.server.commands
       - SERVER_PROGRESS_TOPIC=beelder.staging.server.progress
       - GROUP_ID=beelder.staging.api.group
+      - BROKER=redpanda:9092
+
+  worker:
+    build:
+      context: /srv/apps/beelder/staging/core
+      dockerfile: build/Dockerfile.worker
+    image: beelder-staging-worker:latest
+    container_name: beelder-staging-worker
+    restart: unless-stopped
+    networks:
+      - beelder-staging-network
+      - infra-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CONSUMER_TOPIC=beelder.staging.server.commands
+      - PRODUCER_TOPIC=beelder.staging.server.progress
+      - GROUP_ID=beelder.staging.worker.group
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - BUILDER_CONFIG={"max_concurrent_builds":3, "max_alive_servers":5, "timeout_seconds":120}
       - BROKER=redpanda:9092
 
   app:
