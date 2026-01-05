@@ -20,4 +20,4 @@ That's it. Keep it simple.
 
 ## Next stage
 
-## 1. Fetch the servers plans
+## 1. Fetch the servers plans.
