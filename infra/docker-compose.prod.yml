@@ -1,31 +1,39 @@
-
 services:
-  ## Infrastructure Services ##
-  # Redpanda Service
-  redpanda:
-    image: redpandadata/redpanda:latest
-    container_name: redpanda
-    command:
-      - redpanda
-      - start
-      - --overprovisioned
-      - --smp
-      - "1"
-      - --memory
-      - 1G
-      - --reserve-memory
-      - 0M
-      # 1) Bind three listeners inside the container
-      - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      # 2) Advertise how clients should reach each listener
-      - --advertise-kafka-addr
-      - PLAINTEXT://redpanda:9092,PLAINTEXT_HOST://${VPN_HOST:-localhost}:29092
+  api:
+    build:
+      context: /srv/apps/beelder/production/core
+      dockerfile: Dockerfile
+    image: beelder-api:latest
+    container_name: beelder-api
     ports:
-      - "9092:9092"   # internal within docker network (service name DNS)
-      - "29092:29092" # host access for local dev tools
-    healthcheck:
-      test: ["CMD", "bash", "-lc", "rpk cluster info || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - "3001:3000"
+    restart: unless-stopped
+    networks:
+      - beelder-network
+      - infra-network
+    environment:
+      - SERVER_COMMANDS_TOPIC=beelder.server.commands
+      - SERVER_PROGRESS_TOPIC=beelder.server.progress
+      - GROUP_ID=beelder.api.group
+      - BROKER=redpanda:9092
+
+  app:
+    build:
+      context: /srv/apps/beelder/production/app
+      dockerfile: Dockerfile
+    image: beelder-app:latest
+    container_name: beelder-app
+    ports:
+      - "82:80"
+    restart: unless-stopped
+    networks:
+      - beelder-network
+    depends_on:
+      - api
+
+networks:
+  beelder-network:
+    driver: bridge
+  infra-network:
+    name: infra-network
+    external: true

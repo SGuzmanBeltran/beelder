@@ -1,0 +1,39 @@
+services:
+  api:
+    build:
+      context: /srv/apps/beelder/staging/core
+      dockerfile: Dockerfile
+    image: beelder-staging-api:latest
+    container_name: beelder-staging-api
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - beelder-staging-network
+      - infra-network
+    environment:
+      - SERVER_COMMANDS_TOPIC=beelder.staging.server.commands
+      - SERVER_PROGRESS_TOPIC=beelder.staging.server.progress
+      - GROUP_ID=beelder.staging.api.group
+      - BROKER=redpanda:9092
+
+  app:
+    build:
+      context: /srv/apps/beelder/staging/app
+      dockerfile: Dockerfile
+    image: beelder-staging-app:latest
+    container_name: beelder-staging-app
+    ports:
+      - "81:80"
+    restart: unless-stopped
+    networks:
+      - beelder-staging-network
+    depends_on:
+      - api
+
+networks:
+  beelder-staging-network:
+    driver: bridge
+  infra-network:
+    name: infra-network
+    external: true
