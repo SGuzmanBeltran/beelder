@@ -14,7 +14,7 @@ import { Input } from "./ui/input";
 import { PricingCard } from "./pricing-card";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -27,21 +27,22 @@ const pricingPlans = [
 	{
 		ram: "2GB",
 		price: "$11.99",
-		badge: { text: "Insufficient RAM", color: "red" as const },
 	},
 	{
 		ram: "4GB",
 		price: "$15.99",
-		badge: { text: "Insufficient RAM", color: "red" as const },
 	},
 	{
 		ram: "6GB",
 		price: "$17.99",
-		badge: { text: "Recommended", color: "yellow" as const },
 	},
 	{
 		ram: "8GB",
 		price: "$23.99",
+	},
+	{
+		ram: "12GB",
+		price: "$29.99",
 	},
 ];
 
@@ -71,6 +72,7 @@ type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export function CreateServer() {
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
+	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
 
 	const handlePrevious = () => {
 		setCurrentPlanIndex((prev) => {
@@ -88,7 +90,42 @@ export function CreateServer() {
 		});
 	};
 
-	const currentPlan = pricingPlans[currentPlanIndex];
+	// Get recommended plan from backend
+	const fetchRecommendedPlan = async (
+		serverType: string,
+		playerCount: number,
+		region: string
+	) => {
+		if (!serverType || !playerCount || !region) return;
+
+		setIsLoadingRecommendation(true);
+		try {
+			const response = await fetch(
+				`http://localhost:3000/api/v1/server/recommended-plans?serverType=${serverType}&playersCount=${playerCount}&region=${region}`,
+				{
+					method: "GET",
+				}
+			);
+			const data = await response.json();
+
+			// Find the index of the recommended plan
+			const recommendedRam = data.data.recommendation;
+			const planIndex = pricingPlans.findIndex(
+				(plan) => plan.ram === recommendedRam
+			);
+			console.log(planIndex);
+
+			if (planIndex !== -1 && planIndex !== 0) {
+				// Don't auto-select free plan
+				setCurrentPlanIndex(planIndex);
+				setValue("ramPlan", pricingPlans[planIndex].ram);
+			}
+		} catch (error) {
+			console.error("Error fetching recommendation:", error);
+		} finally {
+			setIsLoadingRecommendation(false);
+		}
+	};
 
 	const {
 		handleSubmit,
@@ -98,16 +135,56 @@ export function CreateServer() {
 	} = useForm<ServerConfig>({
 		resolver: zodResolver(serverConfigSchema),
 		defaultValues: {
-			playerCount: 1,
+			playerCount: 0,
 			premiumOnly: true,
 			ramPlan: pricingPlans[0].ram,
 		},
 	});
+
+	// Watch for changes in serverType, playerCount, and region
+	useEffect(() => {
+		const subscription = watch((value, { name }) => {
+			if (
+				(name === "serverType" ||
+					name === "playerCount" ||
+					name === "region") &&
+				value.serverType &&
+				value.playerCount &&
+				value.region
+			) {
+				// Debounce API call
+				const timeoutId = setTimeout(() => {
+					fetchRecommendedPlan(
+						value.serverType!,
+						value.playerCount!,
+						value.region!
+					);
+				}, 500);
+				return () => clearTimeout(timeoutId);
+			}
+		});
+		return () => subscription.unsubscribe();
+	}, [watch]);
+
 	const onSubmit: SubmitHandler<ServerConfig> = (data) =>
 		console.log("OnSubmit " + JSON.stringify(data));
 
 	const onError = (errors: FieldErrors<ServerConfig>) => {
 		console.log("Form Errors: " + JSON.stringify(errors));
+	};
+
+	// Determine badge for current plan
+	const getCurrentPlanBadge = () => {
+		if (currentPlanIndex === 0) {
+			return { text: "Free", color: "stone" as const };
+		}
+		// You can add logic here based on recommendation from backend
+		return undefined;
+	};
+
+	const currentPlan = {
+		...pricingPlans[currentPlanIndex],
+		badge: getCurrentPlanBadge(),
 	};
 
 	return (
@@ -135,7 +212,7 @@ export function CreateServer() {
 									<SelectContent>
 										<SelectItem value="vanilla">Vanilla</SelectItem>
 										<SelectItem value="paper">Paper</SelectItem>
-										<SelectItem value="forge">Forge</SelectItem>
+										<SelectItem value="curseforge">CurseForge</SelectItem>
 									</SelectContent>
 								</Select>
 
@@ -175,6 +252,9 @@ export function CreateServer() {
 									max={100}
 									step={1}
 								/>
+								<p className="text-sm text-stone-400">
+									{watch("playerCount")} players
+								</p>
 								{errors.playerCount && (
 									<p className="text-red-500">
 										{errors.playerCount.message as string}
@@ -220,12 +300,12 @@ export function CreateServer() {
 								<h4>Server name</h4>
 								<Input
 									onChange={(e) => setValue("serverName", e.target.value)}
-								/>{" "}
+								/>
 								{errors.serverName && (
 									<p className="text-red-500">
 										{errors.serverName.message as string}
 									</p>
-								)}{" "}
+								)}
 							</div>
 
 							<div className="flex justify-between space-x-6">
@@ -244,12 +324,12 @@ export function CreateServer() {
 											<SelectItem value="hard">Hard</SelectItem>
 											<SelectItem value="hardcore">Hardcore</SelectItem>
 										</SelectContent>
-									</Select>{" "}
+									</Select>
 									{errors.difficulty && (
 										<p className="text-red-500">
 											{errors.difficulty.message as string}
 										</p>
-									)}{" "}
+									)}
 								</div>
 								<div className="w-1/2 flex flex-col justify-center space-y-3 md:space-y-1">
 									<h4 className="pb-2">Allow only premium players</h4>
@@ -263,11 +343,23 @@ export function CreateServer() {
 							</div>
 						</CardContent>
 					</Card>
+
+					<button
+						type="submit"
+						className="w-full bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-semibold py-3 rounded-lg transition-colors"
+					>
+						Create Server
+					</button>
 				</div>
 
 				<div className="flex flex-col w-full sm:w-2/5 space-y-8">
 					<div className="max-w-2xl w-full overflow-visible">
 						<div className="space-y-4 py-8">
+							{isLoadingRecommendation && (
+								<p className="text-center text-sm text-stone-400">
+									Finding best plan...
+								</p>
+							)}
 							{/* Carousel */}
 							<div className="relative flex items-center justify-center gap-4">
 								{/* Previous Button */}

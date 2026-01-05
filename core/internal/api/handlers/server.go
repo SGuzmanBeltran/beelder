@@ -22,6 +22,7 @@ func (h *ServerHandler) RegisterRoutes(routes fiber.Router) {
 	servers := routes.Group("/server")
 
 	servers.Post("", validation.ValidateBody[types.CreateServerConfig], h.createServer)
+	servers.Get("/recommended-plans", h.getRecommendedPlans)
 }
 
 func (h *ServerHandler) createServer(c *fiber.Ctx) error {
@@ -41,4 +42,30 @@ func (h *ServerHandler) createServer(c *fiber.Ctx) error {
         "name": serverConfig.Name,
 		"id": serverId,
     })
+}
+
+func (h *ServerHandler) getRecommendedPlans(c *fiber.Ctx) error {
+    params := &types.RecommendationServerParams{
+        ServerType:   c.Query("serverType"),
+        PlayersCount: c.QueryInt("playersCount", 0),
+        Region:       c.Query("region"),
+    }
+
+	if params.ServerType == "" || params.PlayersCount <= 0 || params.Region == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "serverType, playersCount, and region are required",
+        })
+    }
+
+	plans, err := h.serverService.GetRecommendedPlans(params)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(
+		fiber.Map{
+			"data": plans,
+		})
 }

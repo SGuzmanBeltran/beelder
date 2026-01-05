@@ -15,7 +15,17 @@ type CreateServerConfig struct {
 	OnlineMode   bool   `json:"online_mode" validate:"boolean"`
 }
 
+type RecommendationServerParams struct {
+	PlayersCount int `query:"players_count" validate:"required,min=1,max=100"`
+	ServerType   string `query:"server_type" validate:"required"`
+	Region 	 string `query:"region" validate:"required"`
+}
+
 type MemorySettings struct {
 	Min string
 	Max string
+}
+
+type RecommendationResponse struct {
+	Recommendation string
 }

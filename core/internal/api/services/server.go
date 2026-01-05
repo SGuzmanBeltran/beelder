@@ -25,9 +25,9 @@ func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) (st
 	// Convert struct to JSON bytes
 	serverId := uuid.New().String()
 	jsonBytes, err := json.Marshal(serverConfig)
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
 	// Send message with JSON bytes
 	go s.producer.SendMessage(kafka.Message{
@@ -35,4 +35,34 @@ func (s *ServerService) CreateServer(serverConfig *types.CreateServerConfig) (st
 		Value: jsonBytes,
 	})
 	return serverId, nil
+}
+
+func (s *ServerService) GetRecommendedPlans(params *types.RecommendationServerParams) (types.RecommendationResponse, error) {
+	// Simple recommendation logic based on players count and server type
+	var plans types.RecommendationResponse
+
+	switch params.ServerType {
+	case "vanilla", "paper":
+		if params.PlayersCount <= 10 {
+			plans = types.RecommendationResponse{Recommendation: "2GB"}
+		} else if params.PlayersCount <= 30 {
+			plans = types.RecommendationResponse{Recommendation: "4GB"}
+		} else if params.PlayersCount <= 50 {
+			plans = types.RecommendationResponse{Recommendation: "6GB"}
+		} else if params.PlayersCount <= 100 {
+			plans = types.RecommendationResponse{Recommendation: "8GB"}
+		}
+	case "curseforge":
+		if params.PlayersCount <= 10 {
+			plans = types.RecommendationResponse{Recommendation: "4GB"}
+		} else if params.PlayersCount <= 30 {
+			plans = types.RecommendationResponse{Recommendation: "6GB"}
+		} else if params.PlayersCount <= 50 {
+			plans = types.RecommendationResponse{Recommendation: "8GB"}
+		} else if params.PlayersCount <= 100 {
+			plans = types.RecommendationResponse{Recommendation: "12GB"}
+		}
+	}
+
+	return plans, nil
 }
