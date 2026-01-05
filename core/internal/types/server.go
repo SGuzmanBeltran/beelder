@@ -27,5 +27,5 @@ type MemorySettings struct {
 }
 
 type RecommendationResponse struct {
-	Recommendation string
+	Recommendation string `json:"recommendation"`
 }

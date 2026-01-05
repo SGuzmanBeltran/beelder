@@ -361,62 +361,89 @@ export function CreateServer() {
 				<div className="flex flex-col w-full sm:w-2/5 space-y-8">
 					<div className="max-w-2xl w-full overflow-visible">
 						<div className="space-y-4 py-8">
-							{isLoadingRecommendation && (
-								<p className="text-center text-sm text-stone-400">
-									Finding best plan...
-								</p>
-							)}
-							{/* Carousel */}
-							<div className="relative flex items-center justify-center gap-4">
-								{/* Previous Button */}
-								<button
-									type="button"
-									onClick={handlePrevious}
-									className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
-									aria-label="Previous plan"
-								>
-									<HugeiconsIcon icon={ArrowLeft} size={20} />
-								</button>
+							{isLoadingRecommendation || recommendedPlan === null ? (
+								/* Skeleton Loading */
+								<div className="relative flex items-center justify-center gap-4">
+									{/* Invisible Previous Button Placeholder */}
+									<div className="w-10 h-10 shrink-0"></div>
 
-								{/* Pricing Card */}
-								<div className="flex-1">
-									<PricingCard
-										ram={currentPlan.ram}
-										price={currentPlan.price}
-										badge={currentPlan.badge}
-									/>
+									{/* Skeleton Card */}
+									<div className="flex-1 animate-pulse">
+										<Card className="border-2 border-stone-700 bg-stone-900 min-w-70 shrink-0">
+											<CardContent className="p-6 space-y-4">
+												{/* RAM size skeleton */}
+												<div className="text-center pt-3">
+													<div className="h-9 bg-stone-700 rounded w-24 mx-auto"></div>
+												</div>
+												{/* Price skeleton */}
+												<div className="text-center space-y-2">
+													<div className="h-8 bg-stone-700 rounded w-28 mx-auto"></div>
+													<div className="h-3 bg-stone-700 rounded w-20 mx-auto"></div>
+												</div>
+												{/* Button skeleton */}
+												<div className="h-10 bg-stone-700 rounded w-full"></div>
+											</CardContent>
+										</Card>
+									</div>
+
+									{/* Invisible Next Button Placeholder */}
+									<div className="w-10 h-10 shrink-0"></div>
 								</div>
+							) : (
+								<>
+									{/* Carousel */}
+									<div className="relative flex items-center justify-center gap-4">
+										{/* Previous Button */}
+										<button
+											type="button"
+											onClick={handlePrevious}
+											className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
+											aria-label="Previous plan"
+										>
+											<HugeiconsIcon icon={ArrowLeft} size={20} />
+										</button>
 
-								{/* Next Button */}
-								<button
-									type="button"
-									onClick={handleNext}
-									className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
-									aria-label="Next plan"
-								>
-									<HugeiconsIcon icon={ArrowRight} size={20} />
-								</button>
-							</div>
+										{/* Pricing Card */}
+										<div className="flex-1">
+											<PricingCard
+												ram={currentPlan.ram}
+												price={currentPlan.price}
+												badge={currentPlan.badge}
+											/>
+										</div>
 
-							{/* Indicator Dots */}
-							<div className="flex justify-center gap-2">
-								{pricingPlans.map((_, index) => (
-									<button
-										key={index}
-										type="button"
-										onClick={() => {
-											setCurrentPlanIndex(index);
-											setValue("ramPlan", pricingPlans[index].ram);
-										}}
-										className={`w-2 h-2 rounded-full transition-all ${
-											index === currentPlanIndex
-												? "bg-yellow-500 w-8"
-												: "bg-stone-600 hover:bg-stone-500"
-										}`}
-										aria-label={`Go to plan ${index + 1}`}
-									/>
-								))}
-							</div>
+										{/* Next Button */}
+										<button
+											type="button"
+											onClick={handleNext}
+											className="z-10 flex items-center justify-center w-10 h-10 rounded-full bg-stone-800 hover:bg-stone-700 border-2 border-stone-600 transition-colors shrink-0"
+											aria-label="Next plan"
+										>
+											<HugeiconsIcon icon={ArrowRight} size={20} />
+										</button>
+									</div>
+
+									{/* Indicator Dots */}
+									<div className="flex justify-center gap-2">
+										{pricingPlans.map((_, index) => (
+											<button
+												key={index}
+												type="button"
+												onClick={() => {
+													setCurrentPlanIndex(index);
+													setValue("ramPlan", pricingPlans[index].ram);
+												}}
+												className={`w-2 h-2 rounded-full transition-all ${
+													index === currentPlanIndex
+														? "bg-yellow-500 w-8"
+														: "bg-stone-600 hover:bg-stone-500"
+												}`}
+												aria-label={`Go to plan ${index + 1}`}
+											/>
+										))}
+									</div>
+								</>
+							)}
 						</div>
 					</div>
 				</div>
