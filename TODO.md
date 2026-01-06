@@ -12,8 +12,8 @@
 - Make "SELECT PLAN" button submit the form ✅
 
 ## 3. Connect to Backend (if time)
-- Send form data to API
-- Update API create server endpoint
+- Send form data to API ✅
+- Update API create server endpoint ✅
 - Handle success/error
 
 That's it. Keep it simple.

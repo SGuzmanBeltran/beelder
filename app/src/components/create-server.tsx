@@ -7,6 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import axios from "axios";
 import { type SubmitHandler, useForm, type FieldErrors } from "react-hook-form";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -66,8 +67,14 @@ const serverConfigSchema = z.object({
 	difficulty: z
 		.string("Difficulty is required")
 		.min(1, "Difficulty is required"),
-	premiumOnly: z.boolean(),
+	onlineMode: z.boolean(),
 });
+
+interface CreationResponse {
+	message: string;
+	name: string;
+	id: string;
+}
 
 type ServerConfig = z.infer<typeof serverConfigSchema>;
 
@@ -75,6 +82,20 @@ export function CreateServer() {
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
 	const [recommendedPlan, setRecommendedPlan] = useState<number | null>(null);
+
+	const {
+		handleSubmit,
+		watch,
+		setValue,
+		formState: { errors },
+	} = useForm<ServerConfig>({
+		resolver: zodResolver(serverConfigSchema),
+		defaultValues: {
+			playerCount: 0,
+			onlineMode: true,
+			ramPlan: pricingPlans[0].ram,
+		},
+	});
 
 	const handlePrevious = () => {
 		setCurrentPlanIndex((prev) => {
@@ -102,20 +123,15 @@ export function CreateServer() {
 
 		setIsLoadingRecommendation(true);
 		try {
-			const response = await fetch(
-				`http://localhost:3000/api/v1/server/recommended-plans?serverType=${serverType}&playersCount=${playerCount}&region=${region}`,
-				{
-					method: "GET",
-				}
+			const { data } = await axios.get(
+				`http://localhost:3000/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
 			);
-			const data = await response.json();
 
 			// Find the index of the recommended plan
 			const recommendedRam = data.data.recommendation;
 			const planIndex = pricingPlans.findIndex(
 				(plan) => plan.ram === recommendedRam
 			);
-			console.log(planIndex);
 
 			if (planIndex !== -1 && planIndex !== 0) {
 				// Don't auto-select free plan
@@ -130,19 +146,26 @@ export function CreateServer() {
 		}
 	};
 
-	const {
-		handleSubmit,
-		watch,
-		setValue,
-		formState: { errors },
-	} = useForm<ServerConfig>({
-		resolver: zodResolver(serverConfigSchema),
-		defaultValues: {
-			playerCount: 0,
-			premiumOnly: true,
-			ramPlan: pricingPlans[0].ram,
-		},
-	});
+	const sendFormData = async (data: ServerConfig) => {
+		try {
+			const { data: responseData } = await axios.post<CreationResponse>(
+				"http://localhost:3000/api/v1/server",
+				{
+					name: data.serverName,
+					server_version: data.serverVersion,
+					server_type: data.serverType,
+					player_count: data.playerCount,
+					region: data.region,
+					ram_plan: data.ramPlan,
+					difficulty: data.difficulty,
+					online_mode: data.onlineMode,
+				}
+			);
+			console.log("Server created successfully:", responseData);
+		} catch (error) {
+			console.error("Error creating server:", error);
+		}
+	};
 
 	// Watch for changes in serverType, playerCount, and region
 	useEffect(() => {
@@ -162,15 +185,14 @@ export function CreateServer() {
 						value.playerCount!,
 						value.region!
 					);
-				}, 500);
+				}, 1000);
 				return () => clearTimeout(timeoutId);
 			}
 		});
 		return () => subscription.unsubscribe();
 	}, [watch]);
 
-	const onSubmit: SubmitHandler<ServerConfig> = (data) =>
-		console.log("OnSubmit " + JSON.stringify(data));
+	const onSubmit: SubmitHandler<ServerConfig> = (data) => sendFormData(data);
 
 	const onError = (errors: FieldErrors<ServerConfig>) => {
 		console.log("Form Errors: " + JSON.stringify(errors));
@@ -341,22 +363,15 @@ export function CreateServer() {
 								<div className="w-1/2 flex flex-col justify-center space-y-3 md:space-y-1">
 									<h4 className="pb-2">Allow only premium players</h4>
 									<Switch
-										checked={watch("premiumOnly") || false}
+										checked={watch("onlineMode") || false}
 										onCheckedChange={(checked) =>
-											setValue("premiumOnly", checked)
+											setValue("onlineMode", checked)
 										}
 									/>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
-
-					<button
-						type="submit"
-						className="w-full bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-semibold py-3 rounded-lg transition-colors"
-					>
-						Create Server
-					</button>
 				</div>
 
 				<div className="flex flex-col w-full sm:w-2/5 space-y-8">

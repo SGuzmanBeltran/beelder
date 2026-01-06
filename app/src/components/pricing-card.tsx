@@ -70,7 +70,7 @@ export function PricingCard({
 					}`}
 					disabled={disabled}
 				>
-					SELECT PLAN
+					Create server
 				</Button>
 			</CardContent>
 		</Card>

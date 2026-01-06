@@ -38,6 +38,30 @@ func ValidateBody[T any](c *fiber.Ctx) error {
 	return c.Next()
 }
 
+// ValidateQuery is a generic middleware for validating query parameters
+func ValidateQuery[T any](c *fiber.Ctx) error {
+	params := new(T)
+
+	// Parse query parameters
+	if err := c.QueryParser(params); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid query parameters",
+		})
+	}
+
+	// Validate params
+	if errors := ValidateStruct(params); len(errors) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"errors": errors,
+		})
+	}
+
+	// Store validated params in context for the next handler
+	c.Locals("validated", params)
+
+	return c.Next()
+}
+
 // ValidateStruct is a generic validation function that can validate any struct
 func ValidateStruct[T any](data *T) []ValidationError {
 	var errors []ValidationError
