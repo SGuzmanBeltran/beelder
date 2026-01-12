@@ -12,6 +12,7 @@ import { type SubmitHandler, useForm, type FieldErrors } from "react-hook-form";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Input } from "./ui/input";
+import { toast } from "sonner";
 import { PricingCard } from "./pricing-card";
 import { PricingCardSkeleton } from "./pricing-card-skeleton";
 import { Slider } from "./ui/slider";
@@ -82,6 +83,7 @@ export function CreateServer() {
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
 	const [recommendedPlan, setRecommendedPlan] = useState<number | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const {
 		handleSubmit,
@@ -122,31 +124,60 @@ export function CreateServer() {
 		if (!serverType || !playerCount || !region) return;
 
 		setIsLoadingRecommendation(true);
-		try {
-			const { data } = await axios.get(
-				`http://localhost:3000/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
-			);
 
-			// Find the index of the recommended plan
-			const recommendedRam = data.data.recommendation;
-			const planIndex = pricingPlans.findIndex(
-				(plan) => plan.ram === recommendedRam
-			);
+		let retries = 0;
+		const maxRetries = 3;
 
-			if (planIndex !== -1 && planIndex !== 0) {
-				// Don't auto-select free plan
-				setCurrentPlanIndex(planIndex);
-				setRecommendedPlan(planIndex);
-				setValue("ramPlan", pricingPlans[planIndex].ram);
+		while (retries < maxRetries) {
+			try {
+				const { data } = await axios.get(
+					`http://localhost:3000/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
+				);
+
+				// Find the index of the recommended plan
+				const recommendedRam = data.data.recommendation;
+				const planIndex = pricingPlans.findIndex(
+					(plan) => plan.ram === recommendedRam
+				);
+
+				if (planIndex !== -1 && planIndex !== 0) {
+					// Don't auto-select free plan
+					setCurrentPlanIndex(planIndex);
+					setRecommendedPlan(planIndex);
+					setValue("ramPlan", pricingPlans[planIndex].ram);
+				}
+
+				// Success - exit the loop
+				setIsLoadingRecommendation(false);
+				return;
+			} catch (error) {
+				retries++;
+
+				if (retries === maxRetries) {
+					// Failed after all retries
+					const message = axios.isAxiosError(error)
+						? error.response?.data?.error || error.message
+						: "Network error. Please check your connection.";
+
+					toast.error("Failed to fetch recommendation", {
+						description: message,
+					});
+				}
+
+				// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
+				if (retries < maxRetries) {
+					await new Promise((resolve) =>
+						setTimeout(resolve, 500 * Math.pow(2, retries - 1))
+					);
+				}
 			}
-		} catch (error) {
-			console.error("Error fetching recommendation:", error);
-		} finally {
-			setIsLoadingRecommendation(false);
 		}
+
+		setIsLoadingRecommendation(false);
 	};
 
 	const sendFormData = async (data: ServerConfig) => {
+		setIsSubmitting(true);
 		try {
 			const { data: responseData } = await axios.post<CreationResponse>(
 				"http://localhost:3000/api/v1/server",
@@ -161,9 +192,23 @@ export function CreateServer() {
 					online_mode: data.onlineMode,
 				}
 			);
-			console.log("Server created successfully:", responseData);
+			toast.success("Server created successfully!", {
+				description: `Your server "${responseData.name}" has been created.`,
+			});
 		} catch (error) {
-			console.error("Error creating server:", error);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			if (axios.isAxiosError(error)) {
+				const message = error.response?.data?.error || error.message;
+				toast.error("Failed to create server", {
+					description: message,
+				});
+			} else {
+				toast.error("Failed to create server", {
+					description: "Network error. Please check your connection.",
+				});
+			}
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -399,6 +444,8 @@ export function CreateServer() {
 												ram={currentPlan.ram}
 												price={currentPlan.price}
 												badge={currentPlan.badge}
+												loading={isSubmitting}
+												disabled={isSubmitting}
 											/>
 										</div>
 

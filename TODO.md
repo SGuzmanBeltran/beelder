@@ -14,10 +14,12 @@
 ## 3. Connect to Backend (if time)
 - Send form data to API ✅
 - Update API create server endpoint ✅
-- Handle success/error
+- Handle success/error ✅
+- Update Worker create server logic
 
 That's it. Keep it simple.
 
 ## Next stage
 
+## 1. Refactor create-server. Use custom hook.
 ## 1. Fetch the servers plans.

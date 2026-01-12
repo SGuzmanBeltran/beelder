@@ -10,6 +10,7 @@ interface PricingCardProps {
 		color: "red" | "green" | "yellow" | "purple" | "stone";
 	};
 	disabled?: boolean;
+	loading?: boolean;
 }
 
 const badgeColors = {
@@ -33,6 +34,7 @@ export function PricingCard({
 	price,
 	badge,
 	disabled = false,
+	loading = false,
 }: PricingCardProps) {
 	const borderColor = badge
 		? cardBorderColors[badge.color]
@@ -70,7 +72,7 @@ export function PricingCard({
 					}`}
 					disabled={disabled}
 				>
-					Create server
+					{loading ? "Creating..." : "Create server"}
 				</Button>
 			</CardContent>
 		</Card>
