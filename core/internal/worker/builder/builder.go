@@ -44,13 +44,13 @@ func validateServerConfig(config *types.CreateServerConfig) error {
 		return fmt.Errorf("invalid server type: %s (must be one of %v)", config.ServerType, validTypes)
 	}
 
-	if config.PlanType == "" {
-		return fmt.Errorf("plan type cannot be empty")
+	if config.RamPlan == "" {
+		return fmt.Errorf("ram plan cannot be empty")
 	}
 
 	validPlans := []string{"free", "budget", "premium"}
-	if !contains(validPlans, config.PlanType) {
-		return fmt.Errorf("invalid plan type: %s (must be one of %v)", config.PlanType, validPlans)
+	if !contains(validPlans, config.RamPlan) {
+		return fmt.Errorf("invalid ram plan: %s (must be one of %v)", config.RamPlan, validPlans)
 	}
 
 	return nil
@@ -99,13 +99,13 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
         return fmt.Errorf("invalid server configuration: %w", err), "validating_configuration"
     }
 
-    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType)
+    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.RamPlan)
 	serverData.ImageName = imageName
 	builderLogger := b.logger.With(
 		"action", "build_server",
 		"server_id", serverData.ServerID,
 		"server_type", serverData.ServerConfig.ServerType,
-		"plan_type", serverData.ServerConfig.PlanType,
+		"ram_plan", serverData.ServerConfig.RamPlan,
 		"image", imageName,
 	)
     // Strategy now handles everything including memory
@@ -175,7 +175,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 		},
 		&network.NetworkingConfig{},
 		nil,
-		fmt.Sprintf("ms-%s-%s-%s", serverData.ServerConfig.ServerType, serverData.ServerConfig.PlanType, serverData.ServerID),
+		fmt.Sprintf("ms-%s-%s-%s", serverData.ServerConfig.ServerType, serverData.ServerConfig.RamPlan, serverData.ServerID),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create container: %w", err), "creating_container"
@@ -264,7 +264,7 @@ func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileConten
 	builderLogger := b.logger.With(
 		"server_id", serverData.ServerID,
 		"server_type", serverData.ServerConfig.ServerType,
-		"plan_type", serverData.ServerConfig.PlanType,
+		"ram_plan", serverData.ServerConfig.RamPlan,
 		"image", serverData.ImageName,
 	)
 

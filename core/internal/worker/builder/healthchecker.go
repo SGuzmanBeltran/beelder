@@ -29,7 +29,7 @@ func (hc *HealthChecker) waitForServerReady(containerID string, serverData *type
 	healthCheckerLogger := hc.logger.With(
 		"server_id", serverData.ServerID,
 		"server_type", serverData.ServerConfig.ServerType,
-		"plan_type", serverData.ServerConfig.PlanType,
+		"ram_plan", serverData.ServerConfig.RamPlan,
 		"image", serverData.ImageName,
 		"container_id", containerID,
 	)

@@ -85,7 +85,7 @@ type BasicBuildStrategy struct {
 func NewBasicBuildStrategy(config *types.CreateServerConfig) *BasicBuildStrategy {
 	return &BasicBuildStrategy{
 		config:   config,
-		settings: GetResourceSettings(config.PlanType, config.ServerType),
+		settings: GetResourceSettings(config.RamPlan, config.ServerType),
 	}
 }
 
@@ -106,7 +106,7 @@ type ForgeBuildStrategy struct {
 func NewForgeBuildStrategy(config *types.CreateServerConfig) *ForgeBuildStrategy {
 	return &ForgeBuildStrategy{
 		config:   config,
-		settings: GetResourceSettings(config.PlanType, config.ServerType),
+		settings: GetResourceSettings(config.RamPlan, config.ServerType),
 	}
 }
 

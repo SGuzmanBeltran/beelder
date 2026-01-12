@@ -96,7 +96,7 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 
 	createLogger = createLogger.With(
 		"server_type", serverConfig.ServerType,
-		"plan_type", serverConfig.PlanType,
+		"ram_plan", serverConfig.RamPlan,
 	)
 
 	createLogger.Info("building server")
