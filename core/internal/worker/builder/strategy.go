@@ -23,56 +23,31 @@ const (
 	OneMB = 1024 * 1024
 )
 
-// GetResourceSettings returns resource settings based on plan type and server type
-func GetResourceSettings(planType string, serverType string) *ResourceSettings {
-	isModded := strings.Contains(strings.ToLower(serverType), "forge")
+// GetResourceSettings returns resource settings based on RAM plan (e.g., "1GB", "2GB", "8GB")
+func GetResourceSettings(ramPlan string, serverType string) *ResourceSettings {
+	// Parse RAM amount from plan (e.g., "8GB" -> 8)
+	var ramGB int
+	fmt.Sscanf(ramPlan, "%dGB", &ramGB)
+	if ramGB == 0 {
+		ramGB = 1 // Default to 1GB if parsing fails
+	}
 
-	switch planType {
-	case "budget":
-		if isModded {
-			return &ResourceSettings{
-				MemoryMin:   "1G",
-				MemoryMax:   "2G",
-				MemoryLimit: 2560 * OneMB, // 2.5GB
-				CPULimit:    1e9,
-			}
-		}
-		return &ResourceSettings{
-			MemoryMin:   "512M",
-			MemoryMax:   "1G",
-			MemoryLimit: 1536 * OneMB, // 1.5GB
-			CPULimit:    1e9,
-		}
-	case "premium":
-		if isModded {
-			return &ResourceSettings{
-				MemoryMin:   "2G",
-				MemoryMax:   "4G",
-				MemoryLimit: 5 * OneMB * 1024, // 5GB
-				CPULimit:    2e9,
-			}
-		}
-		return &ResourceSettings{
-			MemoryMin:   "1G",
-			MemoryMax:   "2G",
-			MemoryLimit: 2560 * OneMB, // 2.5GB
-			CPULimit:    2e9,
-		}
-	default: // free
-		if isModded {
-			return &ResourceSettings{
-				MemoryMin:   "512M",
-				MemoryMax:   "1G",
-				MemoryLimit: 1536 * OneMB, // 1.5GB
-				CPULimit:    5e8,
-			}
-		}
-		return &ResourceSettings{
-			MemoryMin:   "512M",
-			MemoryMax:   "800M",
-			MemoryLimit: OneMB * 1024, // 1GB
-			CPULimit:    5e8,
-		}
+	// Calculate memory settings
+	// Memory limit = chosen RAM / 4 (for demo/VPS constraints), minimum 1GB
+	memoryLimitMB := max(int64(ramGB / 4 * 1024), 1024)
+	memoryLimit := memoryLimitMB * OneMB
+
+	// Max = limit - 512MB, minimum 1GB
+	memoryMaxMB := max(memoryLimitMB-512, 768)
+
+	// Min = max - 512MB, minimum 512MB
+	memoryMinMB := max(memoryMaxMB-512, 512)
+
+	return &ResourceSettings{
+		MemoryMin:   fmt.Sprintf("%dM", memoryMinMB),
+		MemoryMax:   fmt.Sprintf("%dM", memoryMaxMB),
+		MemoryLimit: memoryLimit,
+		CPULimit:    1e9, // Always 1 CPU core
 	}
 }
 

@@ -286,7 +286,7 @@ export function CreateServer() {
 									<SelectContent>
 										<SelectItem value="vanilla">Vanilla</SelectItem>
 										<SelectItem value="paper">Paper</SelectItem>
-										<SelectItem value="curseforge">CurseForge</SelectItem>
+										<SelectItem value="forge">Forge</SelectItem>
 									</SelectContent>
 								</Select>
 

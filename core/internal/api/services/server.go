@@ -52,7 +52,7 @@ func (s *ServerService) GetRecommendedPlans(params *types.RecommendationServerPa
 		} else if params.PlayerCount <= 100 {
 			plans = types.RecommendationResponse{Recommendation: "8GB"}
 		}
-	case "curseforge":
+	case "forge":
 		if params.PlayerCount <= 10 {
 			plans = types.RecommendationResponse{Recommendation: "4GB"}
 		} else if params.PlayerCount <= 30 {

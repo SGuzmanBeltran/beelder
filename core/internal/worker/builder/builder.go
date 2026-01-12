@@ -48,7 +48,7 @@ func validateServerConfig(config *types.CreateServerConfig) error {
 		return fmt.Errorf("ram plan cannot be empty")
 	}
 
-	validPlans := []string{"free", "budget", "premium"}
+	validPlans := []string{"2GB", "4GB", "6GB", "8GB", "12GB"}
 	if !contains(validPlans, config.RamPlan) {
 		return fmt.Errorf("invalid ram plan: %s (must be one of %v)", config.RamPlan, validPlans)
 	}
