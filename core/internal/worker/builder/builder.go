@@ -99,7 +99,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
         return fmt.Errorf("invalid server configuration: %w", err), "validating_configuration"
     }
 
-    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, serverData.ServerConfig.RamPlan)
+    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, strings.ToLower(serverData.ServerConfig.RamPlan))
 	serverData.ImageName = imageName
 	builderLogger := b.logger.With(
 		"action", "build_server",
