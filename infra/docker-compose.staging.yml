@@ -41,6 +41,8 @@ services:
     build:
       context: /srv/apps/beelder/staging/app
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
     image: beelder-staging-app:latest
     container_name: beelder-staging-app
     ports:

@@ -21,6 +21,8 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const pricingPlans = [
 	{
 		ram: "1GB",
@@ -131,7 +133,7 @@ export function CreateServer() {
 		while (retries < maxRetries) {
 			try {
 				const { data } = await axios.get(
-					`http://localhost:3000/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
+					`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
 				);
 
 				// Find the index of the recommended plan
@@ -180,7 +182,7 @@ export function CreateServer() {
 		setIsSubmitting(true);
 		try {
 			const { data: responseData } = await axios.post<CreationResponse>(
-				"http://localhost:3000/api/v1/server",
+				`${API_URL}/api/v1/server`,
 				{
 					name: data.serverName,
 					server_version: data.serverVersion,

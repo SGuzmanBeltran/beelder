@@ -3,6 +3,10 @@ FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
+# Build args for environment variables
+ARG VITE_API_URL=http://localhost:3000
+ENV VITE_API_URL=$VITE_API_URL
+
 # Copy package files (bun uses bun.lock, not bun.lockb)
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
