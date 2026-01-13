@@ -11,6 +11,7 @@ type BuilderConfig struct {
 	MaxConcurrentBuilds int32 `json:"max_concurrent_builds"`
 	MaxAliveServers    	int32 `json:"max_alive_servers"`
 	BuildTimeout        int32 `json:"timeout_seconds"`
+	AssetsPath		 string `json:"assets_path"`
 }
 
 type WorkerConfig struct {

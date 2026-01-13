@@ -29,12 +29,13 @@ services:
       - infra-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /srv/apps/beelder/shared/assets:/assets:ro
     environment:
       - CONSUMER_TOPIC=beelder.staging.server.commands
       - PRODUCER_TOPIC=beelder.staging.server.progress
       - GROUP_ID=beelder.staging.worker.group
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - BUILDER_CONFIG={"max_concurrent_builds":3, "max_alive_servers":5, "timeout_seconds":120}
+      - BUILDER_CONFIG={"max_concurrent_builds":3, "max_alive_servers":5, "timeout_seconds":120, "assets_path":"/assets"}
       - BROKER=redpanda:9092
 
   app:

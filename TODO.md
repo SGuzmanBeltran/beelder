@@ -15,11 +15,12 @@
 - Send form data to API ✅
 - Update API create server endpoint ✅
 - Handle success/error ✅
-- Update Worker create server logic
+- Update Worker create server logic ✅
 
 That's it. Keep it simple.
 
 ## Next stage
 
-## 1. Refactor create-server. Use custom hook.
-## 1. Fetch the servers plans.
+## 1. Descargar archivos de servidores
+## 2. Refactor create-server. Use custom hook.
+## 3. Fetch the servers plans.

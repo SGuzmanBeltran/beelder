@@ -329,17 +329,22 @@ func createBuildContext(dockerfileContent string, serverType string) (io.Reader,
 		return nil, fmt.Errorf("failed to add Dockerfile to tar: %w", err)
 	}
 
-	// Find project root
-	projectRoot, err := findProjectRoot()
-	if err != nil {
-		return nil, err
+	// Get assets path from environment or use default
+	assetsPath := config.WorkerEnvs.BuilderConfig.AssetsPath
+	if assetsPath == "" {
+		// Fallback: try to find project root (for local development)
+		projectRoot, err := findProjectRoot()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find assets path: %w (set ASSETS_PATH env var)", err)
+		}
+		assetsPath = filepath.Join(projectRoot, "assets")
 	}
 
-	jarPath := filepath.Join(projectRoot, "assets", "executables", fmt.Sprintf("%s.jar", serverType))
+	jarPath := filepath.Join(assetsPath, "executables", fmt.Sprintf("%s.jar", serverType))
 
 	jarBytes, err := os.ReadFile(jarPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read server jar: %w", err)
+		return nil, fmt.Errorf("failed to read server jar from %s: %w", jarPath, err)
 	}
 	// Add to tar with the path expected by Dockerfile
 	if err := addTarFile(tw, fmt.Sprintf("assets/executables/%s.jar", serverType), jarBytes); err != nil {
