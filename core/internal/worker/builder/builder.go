@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	initialPort = 25565
+	initialPort = 25570
 )
 
 // validateServerConfig checks if the server configuration is valid before building.
