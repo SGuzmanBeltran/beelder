@@ -20,7 +20,7 @@ type WorkerConfig struct {
 	ProducerTopic  string
 	GroupID string
 	DockerHost string
-	BuilderConfig BuilderConfig
+	BuilderConfig
 }
 
 var WorkerEnvs = initConfig()
