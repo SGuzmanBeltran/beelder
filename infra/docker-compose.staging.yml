@@ -44,6 +44,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL}
+        - VITE_STAGE=staging
     image: beelder-staging-app:latest
     container_name: beelder-staging-app
     ports:

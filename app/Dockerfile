@@ -12,7 +12,9 @@ COPY . .
 
 # Build args MUST be set right before the build command
 ARG VITE_API_URL
+ARG VITE_STAGE
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_STAGE=$VITE_STAGE
 
 # Build the app - Vite will read VITE_API_URL from ENV
 RUN bun run build
