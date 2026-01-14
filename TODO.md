@@ -21,6 +21,6 @@ That's it. Keep it simple.
 
 ## Next stage
 
-## 1. Descargar archivos de servidores
+## 1. Download server's files
 ## 2. Refactor create-server. Use custom hook.
 ## 3. Fetch the servers plans.
