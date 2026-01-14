@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	config "beelder/internal/config/worker"
 	"beelder/internal/types"
+	"beelder/internal/types/interfaces"
 	"beelder/pkg/messaging/redpanda"
 	"bytes"
 	"context"
@@ -74,15 +75,17 @@ type Builder struct{
 	portCounter atomic.Int32
 	logger *slog.Logger
 	imageBuildLocks sync.Map
+	jarManager interfaces.JarManager
 }
 
 // NewBuilder initializes and returns a new Builder instance.
 func NewBuilder(producer *redpanda.RedpandaProducer) *Builder {
 	healthChecker := NewHealthChecker()
 	builder := &Builder{
-		producer: producer,
+		producer:      producer,
 		healthChecker: healthChecker,
-		logger:  slog.Default().With("component", "builder"),
+		logger:        slog.Default().With("component", "builder"),
+		jarManager:    NewLocalJarManager(),
 	}
 	builder.portCounter.Store(initialPort)
 	return builder
@@ -291,8 +294,15 @@ func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileConten
 
 	builderLogger.Info("Image not found, building...")
 
+	//Download the server jar
+	jar, err := b.jarManager.GetJar(ctx, serverData.ServerConfig)
+	if err != nil {
+		return fmt.Errorf("failed to get server jar: %w", err)
+	}
+	builderLogger.Info("Using server JAR", "path", jar.Path, "cached", jar.AlreadyCached)
+
 	// Create build context
-	buildContext, err := createBuildContext(dockerfileContent, serverData.ServerConfig.ServerType)
+	buildContext, err := b.createBuildContext(dockerfileContent, serverData.ServerConfig.ServerType)
 	if err != nil {
 		return err
 	}
@@ -320,7 +330,7 @@ func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileConten
 }
 
 // createBuildContext creates a tar archive in memory with the Dockerfile and the server jar
-func createBuildContext(dockerfileContent string, serverType string) (io.Reader, error) {
+func (b *Builder) createBuildContext(dockerfileContent string, serverType string) (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
