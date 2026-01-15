@@ -8,18 +8,18 @@ import (
 )
 
 type BuilderConfig struct {
-	MaxConcurrentBuilds int32 `json:"max_concurrent_builds"`
-	MaxAliveServers    	int32 `json:"max_alive_servers"`
-	BuildTimeout        int32 `json:"timeout_seconds"`
-	AssetsPath		 string `json:"assets_path"`
+	MaxConcurrentBuilds int32  `json:"max_concurrent_builds"`
+	MaxAliveServers     int32  `json:"max_alive_servers"`
+	BuildTimeout        int32  `json:"timeout_seconds"`
+	AssetsPath          string `json:"assets_path"`
 }
 
 type WorkerConfig struct {
-	Broker     string
+	Broker        string
 	ConsumerTopic string
-	ProducerTopic  string
-	GroupID string
-	DockerHost string
+	ProducerTopic string
+	GroupID       string
+	DockerHost    string
 	BuilderConfig
 }
 
@@ -35,17 +35,18 @@ func initConfig() WorkerConfig {
 
 	var builderConfig BuilderConfig
 	builderConfigString := config.GetEnv("BUILDER_CONFIG")
-	err := json.Unmarshal([]byte(builderConfigString), &builderConfig); if err != nil {
+	err := json.Unmarshal([]byte(builderConfigString), &builderConfig)
+	if err != nil {
 		configLogger.Error("Error parsing BUILDER_CONFIG", "error", err)
 		os.Exit(1)
 	}
 
 	config := WorkerConfig{
-		Broker:     config.GetEnv("BROKER"),
+		Broker:        config.GetEnv("BROKER"),
 		ConsumerTopic: config.GetEnv("CONSUMER_TOPIC"),
-		ProducerTopic:  config.GetEnv("PRODUCER_TOPIC"),
-		GroupID: config.GetEnv("GROUP_ID"),
-		DockerHost: config.GetEnv("DOCKER_HOST"),
+		ProducerTopic: config.GetEnv("PRODUCER_TOPIC"),
+		GroupID:       config.GetEnv("GROUP_ID"),
+		DockerHost:    config.GetEnv("DOCKER_HOST"),
 		BuilderConfig: builderConfig,
 	}
 

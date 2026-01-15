@@ -19,6 +19,7 @@ type ResourceSettings struct {
 	MemoryLimit int64
 	CPULimit    int64
 }
+
 const (
 	OneMB = 1024 * 1024
 )
@@ -34,7 +35,7 @@ func GetResourceSettings(ramPlan string, serverType string) *ResourceSettings {
 
 	// Calculate memory settings
 	// Memory limit = chosen RAM / 4 (for demo/VPS constraints), minimum 1GB
-	memoryLimitMB := max(int64(ramGB / 4 * 1024), 1024)
+	memoryLimitMB := max(int64(ramGB/4*1024), 1024)
 	memoryLimit := memoryLimitMB * OneMB
 
 	// Max = limit - 512MB, minimum 1GB

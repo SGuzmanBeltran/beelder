@@ -69,8 +69,8 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	w.producer.SendJsonMessage(
 		"server.create.started",
 		map[string]string{
-			"message": "Server creation started",
-			"status": "building",
+			"message":   "Server creation started",
+			"status":    "building",
 			"server_id": serverId,
 		},
 	)
@@ -81,8 +81,8 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 		w.producer.SendJsonMessage(
 			"server.create.failed",
 			map[string]string{
-				"error": "Failed to load server config",
-				"status": "error",
+				"error":     "Failed to load server config",
+				"status":    "error",
 				"server_id": serverId,
 			},
 		)
@@ -105,9 +105,9 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 		w.producer.SendJsonMessage(
 			"server.create.failed",
 			map[string]string{
-				"error": "Failed to build server: " + err.Error(),
-				"status": "error",
-				"stage": stage,
+				"error":     "Failed to build server: " + err.Error(),
+				"status":    "error",
+				"stage":     stage,
 				"server_id": serverId,
 			},
 		)
@@ -119,8 +119,8 @@ func (w *Worker) handleCreateServer(message kafka.Message) (bool, error) {
 	w.producer.SendJsonMessage(
 		"server.create.success",
 		map[string]string{
-			"message": "Server created successfully",
-			"status": "running",
+			"message":   "Server created successfully",
+			"status":    "running",
 			"server_id": serverId,
 		},
 	)

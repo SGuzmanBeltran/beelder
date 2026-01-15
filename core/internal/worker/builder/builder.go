@@ -69,13 +69,13 @@ func contains(slice []string, item string) bool {
 
 // Builder handles the creation and deployment of Minecraft servers using Docker.
 // It manages the entire lifecycle from Dockerfile generation to container health checks.
-type Builder struct{
-	healthChecker *HealthChecker
-	producer *redpanda.RedpandaProducer
-	portCounter atomic.Int32
-	logger *slog.Logger
+type Builder struct {
+	healthChecker   *HealthChecker
+	producer        *redpanda.RedpandaProducer
+	portCounter     atomic.Int32
+	logger          *slog.Logger
 	imageBuildLocks sync.Map
-	jarManager interfaces.JarManager
+	jarManager      interfaces.JarManager
 }
 
 // NewBuilder initializes and returns a new Builder instance.
@@ -97,12 +97,12 @@ func NewBuilder(producer *redpanda.RedpandaProducer) *Builder {
 //
 // Returns an error if any step fails.
 func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServerData) (error, string) {
-    // Validate configuration before starting build
-    if err := validateServerConfig(serverData.ServerConfig); err != nil {
-        return fmt.Errorf("invalid server configuration: %w", err), "validating_configuration"
-    }
+	// Validate configuration before starting build
+	if err := validateServerConfig(serverData.ServerConfig); err != nil {
+		return fmt.Errorf("invalid server configuration: %w", err), "validating_configuration"
+	}
 
-    imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, strings.ToLower(serverData.ServerConfig.RamPlan))
+	imageName := fmt.Sprintf("ms-%s-%s:latest", serverData.ServerConfig.ServerType, strings.ToLower(serverData.ServerConfig.RamPlan))
 	serverData.ImageName = imageName
 	builderLogger := b.logger.With(
 		"action", "build_server",
@@ -111,21 +111,21 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 		"ram_plan", serverData.ServerConfig.RamPlan,
 		"image", imageName,
 	)
-    // Strategy now handles everything including memory
-    strategyFactory := &DefaultStrategyFactory{}
-    buildStrategy := strategyFactory.GetStrategy(serverData.ServerConfig)
-    dockerfile := buildStrategy.GenerateDockerfile(serverData.ServerConfig)
+	// Strategy now handles everything including memory
+	strategyFactory := &DefaultStrategyFactory{}
+	buildStrategy := strategyFactory.GetStrategy(serverData.ServerConfig)
+	dockerfile := buildStrategy.GenerateDockerfile(serverData.ServerConfig)
 
 	b.producer.SendJsonMessage(
 		"server.build.building",
 		map[string]string{
-			"message": "Building server image",
-			"status": "building_image",
+			"message":   "Building server image",
+			"status":    "building_image",
 			"server_id": serverData.ServerID,
 		},
 	)
 
-    err := b.buildImageFromDockerfile(ctx, dockerfile, serverData)
+	err := b.buildImageFromDockerfile(ctx, dockerfile, serverData)
 
 	if err != nil {
 		return err, "building_image"
@@ -145,9 +145,9 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	b.producer.SendJsonMessage(
 		"server.build.building",
 		map[string]string{
-			"message": "Building server...",
-			"status": "building",
-			"stage": "server_creation",
+			"message":   "Building server...",
+			"status":    "building",
+			"stage":     "server_creation",
 			"server_id": serverData.ServerID,
 		},
 	)
@@ -172,7 +172,7 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 				Name: "unless-stopped",
 			},
 			Resources: container.Resources{
-				Memory: buildStrategy.GetResourceSettings().MemoryLimit,
+				Memory:   buildStrategy.GetResourceSettings().MemoryLimit,
 				NanoCPUs: buildStrategy.GetResourceSettings().CPULimit,
 			},
 		},
@@ -192,9 +192,9 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	b.producer.SendJsonMessage(
 		"server.build.building",
 		map[string]string{
-			"message": "Starting server...",
-			"status": "building",
-			"stage": "starting",
+			"message":   "Starting server...",
+			"status":    "building",
+			"stage":     "starting",
 			"server_id": serverData.ServerID,
 		},
 	)
@@ -212,9 +212,9 @@ func (b *Builder) BuildServer(ctx context.Context, serverData *types.CreateServe
 	b.producer.SendJsonMessage(
 		"server.build.building",
 		map[string]string{
-			"message": "Checking server health...",
-			"status": "building",
-			"stage": "health_checking",
+			"message":   "Checking server health...",
+			"status":    "building",
+			"stage":     "health_checking",
 			"server_id": serverData.ServerID,
 		},
 	)
@@ -243,23 +243,23 @@ func (b *Builder) DestroyServer(ctx context.Context, containerID string) error {
 		"container_id", containerID,
 	)
 	builderLogger.Info("Destroying server...")
-    cli, err := client.NewClientWithOpts(
-        client.WithHost(config.WorkerEnvs.DockerHost),
-    )
-    if err != nil {
+	cli, err := client.NewClientWithOpts(
+		client.WithHost(config.WorkerEnvs.DockerHost),
+	)
+	if err != nil {
 		builderLogger.Error("Failed to connect to Docker", "error", err)
-        return fmt.Errorf("failed to connect to Docker: %w", err)
-    }
-    defer cli.Close()
+		return fmt.Errorf("failed to connect to Docker: %w", err)
+	}
+	defer cli.Close()
 
-    if err := cli.ContainerRemove(ctx, containerID, container.RemoveOptions{
-        Force: true,
-    }); err != nil {
+	if err := cli.ContainerRemove(ctx, containerID, container.RemoveOptions{
+		Force: true,
+	}); err != nil {
 		builderLogger.Error("Failed to remove container", "error", err)
-        return fmt.Errorf("failed to remove container %s: %w", containerID[:12], err)
-    }
+		return fmt.Errorf("failed to remove container %s: %w", containerID[:12], err)
+	}
 
-    return nil
+	return nil
 }
 
 // buildImageFromDockerfile builds a Docker image from Dockerfile content (string) with the specified image name.
@@ -353,12 +353,12 @@ func (b *Builder) createBuildContext(dockerfileContent string, serverType string
 	if err != nil {
 		return nil, fmt.Errorf("failed to read server jar from %s: %w", jarPath, err)
 	}
-	
+
 	// Add to tar with the path expected by Dockerfile
 	if err := addTarFile(tw, fmt.Sprintf("assets/executables/%s.jar", serverType), jarBytes); err != nil {
 		return nil, fmt.Errorf("failed to add server jar to tar: %w", err)
 	}
-	
+
 	return buf, nil
 }
 

@@ -56,7 +56,7 @@ func LoadEnvFromThisFile(configPath string) error {
 	}
 
 	dir := filepath.Dir(filename)
-	envPath := filepath.Join(dir, configPath ,".env")
+	envPath := filepath.Join(dir, configPath, ".env")
 
 	if _, err := os.Stat(envPath); err != nil {
 		return err

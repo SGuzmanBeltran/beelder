@@ -27,26 +27,26 @@ func (h *ServerHandler) RegisterRoutes(routes fiber.Router) {
 
 func (h *ServerHandler) createServer(c *fiber.Ctx) error {
 	// Get the validated config from context
-    serverConfig := c.Locals("validated").(*types.CreateServerConfig)
+	serverConfig := c.Locals("validated").(*types.CreateServerConfig)
 
 	serverId, err := h.serverService.CreateServer(serverConfig)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "error": err.Error(),
-        })
+			"error": err.Error(),
+		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-        "message": "Server creation started",
-        "name": serverConfig.Name,
-		"id": serverId,
-    })
+		"message": "Server creation started",
+		"name":    serverConfig.Name,
+		"id":      serverId,
+	})
 }
 
 func (h *ServerHandler) getRecommendedPlans(c *fiber.Ctx) error {
-    // Get the validated params from context
-    params := c.Locals("validated").(*types.RecommendationServerParams)
+	// Get the validated params from context
+	params := c.Locals("validated").(*types.RecommendationServerParams)
 
 	plans, err := h.serverService.GetRecommendedPlans(params)
 

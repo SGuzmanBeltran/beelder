@@ -8,19 +8,19 @@ import (
 
 type ProgressEvent struct {
 	ServerID string `json:"server_id"`
-	Status string `json:"status"`
-	Stage string `json:"stage"`
-	Message string `json:"message"`
+	Status   string `json:"status"`
+	Stage    string `json:"stage"`
+	Message  string `json:"message"`
 }
 
 type Client struct {
-	ID string
+	ID       string
 	ServerID string
-	Channel chan ProgressEvent
+	Channel  chan ProgressEvent
 }
 
 type Hub struct {
-	clients map[string]*Client
+	clients    map[string]*Client
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan ProgressEvent
@@ -95,6 +95,3 @@ func NewClient(serverID string) *Client {
 		Channel:  make(chan ProgressEvent, 20), // Buffer size for event bursts
 	}
 }
-
-
-

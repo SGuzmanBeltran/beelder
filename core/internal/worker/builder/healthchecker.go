@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
-type HealthChecker struct{
+type HealthChecker struct {
 	logger *slog.Logger
 }
 
@@ -122,7 +122,7 @@ func (hc *HealthChecker) stripDockerHeaders(logContent string) string {
 // isServerReady checks log content for indicators that the Minecraft server is ready
 func (hc *HealthChecker) isServerReady(logContent string) bool {
 	readyIndicators := []string{
-		"Done",                  // Paper/Spigot: "Done (4.123s)! For help, type \"help\""
+		"Done",                    // Paper/Spigot: "Done (4.123s)! For help, type \"help\""
 		"Server startup",          // Some servers: "Server startup complete"
 		"Time elapsed:",           // Vanilla: Shows when done loading
 		"For help, type \"help\"", // Common ready message

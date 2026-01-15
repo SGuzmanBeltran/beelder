@@ -10,7 +10,7 @@ import (
 
 type RedpandaConfig struct {
 	Brokers []string
-	Topic  string
+	Topic   string
 }
 
 type RedpandaProducer struct {
@@ -26,9 +26,9 @@ func NewRedpandaProducer(config *RedpandaConfig) *RedpandaProducer {
 
 func (rp *RedpandaProducer) Connect() {
 	rp.writer = &kafka.Writer{
-		Addr:     kafka.TCP(rp.config.Brokers...),
-		Topic:    rp.config.Topic,
-		Balancer: &kafka.LeastBytes{},
+		Addr:                   kafka.TCP(rp.config.Brokers...),
+		Topic:                  rp.config.Topic,
+		Balancer:               &kafka.LeastBytes{},
 		AllowAutoTopicCreation: true,
 	}
 	fmt.Println("Connected to Redpanda")

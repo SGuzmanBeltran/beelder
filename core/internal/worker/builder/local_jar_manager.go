@@ -17,9 +17,9 @@ type HTTPClient interface {
 }
 
 type LocalJarManager struct {
-	httpClient     HTTPClient
-	logger         *slog.Logger
-	assetResolver  AssetPathResolver
+	httpClient    HTTPClient
+	logger        *slog.Logger
+	assetResolver AssetPathResolver
 }
 
 func NewLocalJarManager() *LocalJarManager {
@@ -45,7 +45,7 @@ func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.Create
 	if err != nil {
 		return types.JarInfo{}, fmt.Errorf("failed to resolve assets path: %w", err)
 	}
-	
+
 	path := fmt.Sprintf("%s/executables/%s-%s.jar", assetsPath, serverConfig.ServerType, serverConfig.ServerVersion)
 
 	_, err = os.Stat(path)
