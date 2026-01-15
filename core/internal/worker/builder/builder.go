@@ -334,20 +334,17 @@ func (b *Builder) createBuildContext(dockerfileContent string, serverType string
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
+
 	// Add Dockerfile
 	if err := addTarFile(tw, "Dockerfile", []byte(dockerfileContent)); err != nil {
 		return nil, fmt.Errorf("failed to add Dockerfile to tar: %w", err)
 	}
 
-	// Get assets path from environment or use default
-	assetsPath := config.WorkerEnvs.BuilderConfig.AssetsPath
-	if assetsPath == "" {
-		// Fallback: try to find project root (for local development)
-		projectRoot, err := findProjectRoot()
-		if err != nil {
-			return nil, fmt.Errorf("failed to find assets path: %w (set ASSETS_PATH env var)", err)
-		}
-		assetsPath = filepath.Join(projectRoot, "assets")
+	// Use asset resolver to get assets path
+	resolver := NewAssetResolver(config.WorkerEnvs.BuilderConfig.AssetsPath)
+	assetsPath, err := resolver.GetAssetsPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve assets path: %w", err)
 	}
 
 	jarPath := filepath.Join(assetsPath, "executables", fmt.Sprintf("%s.jar", serverType))
@@ -356,10 +353,12 @@ func (b *Builder) createBuildContext(dockerfileContent string, serverType string
 	if err != nil {
 		return nil, fmt.Errorf("failed to read server jar from %s: %w", jarPath, err)
 	}
+	
 	// Add to tar with the path expected by Dockerfile
 	if err := addTarFile(tw, fmt.Sprintf("assets/executables/%s.jar", serverType), jarBytes); err != nil {
 		return nil, fmt.Errorf("failed to add server jar to tar: %w", err)
 	}
+	
 	return buf, nil
 }
 
@@ -376,30 +375,4 @@ func addTarFile(tw *tar.Writer, name string, data []byte) error {
 	}
 	_, err := tw.Write(data)
 	return err
-}
-
-// findProjectRoot walks up the directory tree to find the project root
-// by looking for a directory that contains both "core" and "assets" subdirectories
-func findProjectRoot() (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	projectRoot := wd
-	for {
-		if filepath.Base(projectRoot) == "/" {
-			return "", fmt.Errorf("could not find project root")
-		}
-		coreDir := filepath.Join(projectRoot, "core")
-		assetsDir := filepath.Join(projectRoot, "assets")
-		if _, err := os.Stat(coreDir); err == nil {
-			if _, err := os.Stat(assetsDir); err == nil {
-				break // Found project root
-			}
-		}
-		projectRoot = filepath.Dir(projectRoot)
-	}
-
-	return projectRoot, nil
 }

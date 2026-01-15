@@ -17,32 +17,36 @@ type HTTPClient interface {
 }
 
 type LocalJarManager struct {
-	httpClient HTTPClient
-	logger     *slog.Logger
+	httpClient     HTTPClient
+	logger         *slog.Logger
+	assetResolver  AssetPathResolver
 }
 
 func NewLocalJarManager() *LocalJarManager {
 	return &LocalJarManager{
-		httpClient: &http.Client{},
-		logger:     slog.Default().With("component", "jar_manager"),
+		httpClient:    &http.Client{},
+		logger:        slog.Default().With("component", "jar_manager"),
+		assetResolver: NewAssetResolver(config.WorkerEnvs.AssetsPath),
 	}
 }
 
 func NewLocalJarManagerWithClient(client HTTPClient) *LocalJarManager {
 	return &LocalJarManager{
-		httpClient: client,
-		logger:     slog.Default().With("component", "jar_manager"),
+		httpClient:    client,
+		logger:        slog.Default().With("component", "jar_manager"),
+		assetResolver: NewAssetResolver(config.WorkerEnvs.AssetsPath),
 	}
 }
 
 // GetJar retrieves the JAR file for the given server configuration.
 // If the JAR file is not found locally, it attempts to download it.
 func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.CreateServerConfig) (types.JarInfo, error) {
-	projectRoot, err := findProjectRoot()
+	assetsPath, err := m.assetResolver.GetAssetsPath()
 	if err != nil {
-		return types.JarInfo{}, fmt.Errorf("failed to find assets path: %w (set ASSETS_PATH env var)", err)
+		return types.JarInfo{}, fmt.Errorf("failed to resolve assets path: %w", err)
 	}
-	path := fmt.Sprintf("%s/%s/executables/%s-%s.jar", projectRoot, config.WorkerEnvs.AssetsPath, serverConfig.ServerType, serverConfig.ServerVersion)
+	
+	path := fmt.Sprintf("%s/executables/%s-%s.jar", assetsPath, serverConfig.ServerType, serverConfig.ServerVersion)
 
 	_, err = os.Stat(path)
 	cached := true
