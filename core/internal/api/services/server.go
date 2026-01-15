@@ -2,8 +2,11 @@ package services
 
 import (
 	"beelder/internal/types"
+	"beelder/internal/worker/builder"
 	"beelder/pkg/messaging/redpanda"
 	"encoding/json"
+	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
@@ -11,13 +14,13 @@ import (
 
 type ServerService struct {
 	producer *redpanda.RedpandaProducer
+	versionProvider *builder.DefaultVersionProvider
 }
 
-func NewServerService(brokerConfig *redpanda.RedpandaConfig) *ServerService {
-	producer := redpanda.NewRedpandaProducer(brokerConfig)
-	producer.Connect()
+func NewServerService(producer *redpanda.RedpandaProducer, versionProvider *builder.DefaultVersionProvider) *ServerService {
 	return &ServerService{
 		producer: producer,
+		versionProvider: versionProvider,
 	}
 }
 
@@ -65,4 +68,21 @@ func (s *ServerService) GetRecommendedPlans(params *types.RecommendationServerPa
 	}
 
 	return plans, nil
+}
+
+func (s *ServerService) GetServerVersions(serverType string) ([]string, error) {
+	supportedServerTypes := []string{"vanilla", "paper", "forge"}
+
+	if !slices.Contains(supportedServerTypes, serverType) {
+		return nil, fmt.Errorf("unsupported server type: %s", serverType)
+	}
+
+	versions, err := s.versionProvider.GetAvailableVersions(serverType)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+
 }

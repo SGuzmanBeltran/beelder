@@ -22,18 +22,22 @@ That's it. Keep it simple.
 ## Third Slice - UI Enhancements
 
 ## 1. Refactor create-server. Use custom hook. ✅
-## 2. Fetch the servers plans (RAM-based).
-## 3. Fetch jar servers versions.
-## 4. Add routing to the UI
-## 5. Update UI when server is created.
-## 6. Create new view to show the new server info
-## 7. Update architecture diagram
+## 2. Fetch jar servers versions.
+    - Create endpoint (/server/{server_type}/versions) ✅
+    - Use version_provider.go ✅
+    - Cache endpoint ✅
+    - Fetch when select a server type.
+    - Update options in the UI
+## 3. Add routing to the UI
+## 4. Update UI when server is created.
+## 5. Create new view to show the new server info
+## 6. Update architecture diagram
 
 ---
 
 ## Fourth Slice - Database & State Persistence
 
-## 1. Design database schema (servers, server_events, users)
+## 1. Design database schema (servers, server_events, users, server_plans)
 ## 2. Add PostgreSQL to docker-compose
 ## 3. Implement database migrations
 ## 4. Add database connection pooling
@@ -41,14 +45,16 @@ That's it. Keep it simple.
 ## 6. Implement event consumer (consume from RedPanda)
 ## 7. Implement state persistence layer
 ## 8. Create server repository (CRUD operations)
-## 9. Add event history tracking
-## 10. Create REST endpoints for server state queries
-## 11. Add user-specific server listing
-## 12. Implement server status endpoint
-## 13. Add server ownership validation
-## 14. Update architecture diagram (add State Manager + PostgreSQL)
-## 15. Add State Manager to docker-compose
-## 16. Document new event schema
+## 9. Create server plans repository (CRUD operations)
+## 10. Fetch the servers plans (RAM-based).
+## 11. Add event history tracking
+## 12. Create REST endpoints for server state queries
+## 13. Add user-specific server listing
+## 14. Implement server status endpoint
+## 15. Add server ownership validation
+## 16. Update architecture diagram (add State Manager + PostgreSQL)
+## 17. Add State Manager to docker-compose
+## 18. Document new event schema
 
 ---
 
