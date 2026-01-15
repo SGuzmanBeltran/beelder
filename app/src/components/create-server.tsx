@@ -7,265 +7,32 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import axios from "axios";
-import { type SubmitHandler, useForm, type FieldErrors } from "react-hook-form";
+import { pricingPlans, useServerCreation } from "@/hooks/useServerCreation";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Input } from "./ui/input";
-import { toast } from "sonner";
 import { PricingCard } from "./pricing-card";
 import { PricingCardSkeleton } from "./pricing-card-skeleton";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
-import { useEffect, useState } from "react";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-const pricingPlans = [
-	{
-		ram: "1GB",
-		price: "$0.00",
-		badge: { text: "Free", color: "stone" as const },
-	},
-	{
-		ram: "2GB",
-		price: "$11.99",
-	},
-	{
-		ram: "4GB",
-		price: "$15.99",
-	},
-	{
-		ram: "6GB",
-		price: "$17.99",
-	},
-	{
-		ram: "8GB",
-		price: "$23.99",
-	},
-	{
-		ram: "12GB",
-		price: "$29.99",
-	},
-];
-
-const serverConfigSchema = z.object({
-	serverType: z
-		.string("Server type is required")
-		.min(1, "Server type is required"),
-	serverVersion: z
-		.string("Server version is required")
-		.min(1, "Server version is required"),
-	playerCount: z
-		.number()
-		.min(1, "Player count must be at least 1")
-		.max(100, "Player count cannot exceed 100"),
-	region: z.string("Region is required").min(1, "Region is required"),
-	ramPlan: z.string().min(1, "RAM plan is required"),
-	serverName: z
-		.string("Server name is required")
-		.min(1, "Server name is required"),
-	difficulty: z
-		.string("Difficulty is required")
-		.min(1, "Difficulty is required"),
-	onlineMode: z.boolean(),
-});
-
-interface CreationResponse {
-	message: string;
-	name: string;
-	id: string;
-}
-
-type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export function CreateServer() {
-	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
-	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
-	const [recommendedPlan, setRecommendedPlan] = useState<number | null>(null);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-
 	const {
-		handleSubmit,
-		watch,
-		setValue,
-		formState: { errors },
-	} = useForm<ServerConfig>({
-		resolver: zodResolver(serverConfigSchema),
-		defaultValues: {
-			playerCount: 0,
-			onlineMode: true,
-			ramPlan: pricingPlans[0].ram,
-		},
-	});
-
-	const handlePrevious = () => {
-		setCurrentPlanIndex((prev) => {
-			const newIndex = prev > 0 ? prev - 1 : pricingPlans.length - 1;
-			setValue("ramPlan", pricingPlans[newIndex].ram);
-			return newIndex;
-		});
-	};
-
-	const handleNext = () => {
-		setCurrentPlanIndex((prev) => {
-			const newIndex = prev < pricingPlans.length - 1 ? prev + 1 : 0;
-			setValue("ramPlan", pricingPlans[newIndex].ram);
-			return newIndex;
-		});
-	};
-
-	// Get recommended plan from backend
-	const fetchRecommendedPlan = async (
-		serverType: string,
-		playerCount: number,
-		region: string
-	) => {
-		if (!serverType || !playerCount || !region) return;
-
-		setIsLoadingRecommendation(true);
-
-		let retries = 0;
-		const maxRetries = 3;
-
-		while (retries < maxRetries) {
-			try {
-				const { data } = await axios.get(
-					`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
-				);
-
-				// Find the index of the recommended plan
-				const recommendedRam = data.data.recommendation;
-				const planIndex = pricingPlans.findIndex(
-					(plan) => plan.ram === recommendedRam
-				);
-
-				if (planIndex !== -1 && planIndex !== 0) {
-					// Don't auto-select free plan
-					setCurrentPlanIndex(planIndex);
-					setRecommendedPlan(planIndex);
-					setValue("ramPlan", pricingPlans[planIndex].ram);
-				}
-
-				// Success - exit the loop
-				setIsLoadingRecommendation(false);
-				return;
-			} catch (error) {
-				retries++;
-
-				if (retries === maxRetries) {
-					// Failed after all retries
-					const message = axios.isAxiosError(error)
-						? error.response?.data?.error || error.message
-						: "Network error. Please check your connection.";
-
-					toast.error("Failed to fetch recommendation", {
-						description: message,
-					});
-				}
-
-				// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
-				if (retries < maxRetries) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, 500 * Math.pow(2, retries - 1))
-					);
-				}
-			}
-		}
-
-		setIsLoadingRecommendation(false);
-	};
-
-	const sendFormData = async (data: ServerConfig) => {
-		setIsSubmitting(true);
-		try {
-			const { data: responseData } = await axios.post<CreationResponse>(
-				`${API_URL}/api/v1/server`,
-				{
-					name: data.serverName,
-					server_version: data.serverVersion,
-					server_type: data.serverType,
-					player_count: data.playerCount,
-					region: data.region,
-					ram_plan: data.ramPlan,
-					difficulty: data.difficulty,
-					online_mode: data.onlineMode,
-				}
-			);
-			toast.success("Server created successfully!", {
-				description: `Your server "${responseData.name}" has been created.`,
-			});
-		} catch (error) {
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			if (axios.isAxiosError(error)) {
-				const message = error.response?.data?.error || error.message;
-				toast.error("Failed to create server", {
-					description: message,
-				});
-			} else {
-				toast.error("Failed to create server", {
-					description: "Network error. Please check your connection.",
-				});
-			}
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	// Watch for changes in serverType, playerCount, and region
-	useEffect(() => {
-		const subscription = watch((value, { name }) => {
-			if (
-				(name === "serverType" ||
-					name === "playerCount" ||
-					name === "region") &&
-				value.serverType &&
-				value.playerCount &&
-				value.region
-			) {
-				// Debounce API call
-				const timeoutId = setTimeout(() => {
-					fetchRecommendedPlan(
-						value.serverType!,
-						value.playerCount!,
-						value.region!
-					);
-				}, 1000);
-				return () => clearTimeout(timeoutId);
-			}
-		});
-		return () => subscription.unsubscribe();
-	}, [watch]);
-
-	const onSubmit: SubmitHandler<ServerConfig> = (data) => sendFormData(data);
-
-	const onError = (errors: FieldErrors<ServerConfig>) => {
-		console.log("Form Errors: " + JSON.stringify(errors));
-	};
-
-	// Determine badge for current plan
-	const getCurrentPlanBadge = () => {
-		if (currentPlanIndex === 0) {
-			return { text: "Free", color: "stone" as const };
-		} else if (currentPlanIndex === recommendedPlan) {
-			return { text: "Recommended", color: "yellow" as const };
-		} else if (recommendedPlan && currentPlanIndex < recommendedPlan) {
-			return { text: "Not enough RAM", color: "red" as const };
-		}
-
-		return undefined;
-	};
-
-	const currentPlan = {
-		...pricingPlans[currentPlanIndex],
-		badge: getCurrentPlanBadge(),
-	};
+		currentPlanIndex,
+		isLoadingRecommendation,
+		recommendedPlan,
+		isSubmitting,
+		form,
+		handlePrevious,
+		handleNext,
+		sendFormData,
+		setCurrentPlanIndex,
+		currentPlan,
+	} = useServerCreation();
 
 	return (
 		<form
-			onSubmit={handleSubmit(onSubmit, onError)}
+			onSubmit={form.handleSubmit(sendFormData)}
 			className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0"
 		>
 			<div className="flex w-full justify-start">
@@ -280,7 +47,7 @@ export function CreateServer() {
 							<div className="space-y-3">
 								<h4>What should we install on you server?</h4>
 								<Select
-									onValueChange={(value) => setValue("serverType", value)}
+									onValueChange={(value) => form.setValue("serverType", value)}
 								>
 									<SelectTrigger className="w-full my-2">
 										<SelectValue placeholder="Select server type" />
@@ -292,14 +59,16 @@ export function CreateServer() {
 									</SelectContent>
 								</Select>
 
-								{errors.serverType && (
+								{form.formState.errors.serverType && (
 									<p className="text-red-500">
-										{errors.serverType.message as string}
+										{form.formState.errors.serverType.message as string}
 									</p>
 								)}
 
 								<Select
-									onValueChange={(value) => setValue("serverVersion", value)}
+									onValueChange={(value) =>
+										form.setValue("serverVersion", value)
+									}
 								>
 									<SelectTrigger className="w-full my-2">
 										<SelectValue placeholder="Select server version" />
@@ -310,9 +79,9 @@ export function CreateServer() {
 										<SelectItem value="1.21.9">1.21.9</SelectItem>
 									</SelectContent>
 								</Select>
-								{errors.serverVersion && (
+								{form.formState.errors.serverVersion && (
 									<p className="text-red-500">
-										{errors.serverVersion.message as string}
+										{form.formState.errors.serverVersion.message as string}
 									</p>
 								)}
 							</div>
@@ -322,18 +91,24 @@ export function CreateServer() {
 								</h4>
 								<Slider
 									className="my-2"
-									value={watch("playerCount") ? [watch("playerCount")] : [0]}
-									onValueChange={(value) => setValue("playerCount", value[0])}
+									value={
+										form.watch("playerCount")
+											? [form.watch("playerCount")]
+											: [0]
+									}
+									onValueChange={(value) =>
+										form.setValue("playerCount", value[0])
+									}
 									defaultValue={[0]}
 									max={100}
 									step={1}
 								/>
 								<p className="text-sm text-stone-400">
-									{watch("playerCount")} players
+									{form.watch("playerCount")} players
 								</p>
-								{errors.playerCount && (
+								{form.formState.errors.playerCount && (
 									<p className="text-red-500">
-										{errors.playerCount.message as string}
+										{form.formState.errors.playerCount.message as string}
 									</p>
 								)}
 							</div>
@@ -343,7 +118,7 @@ export function CreateServer() {
 					<Card className="w-full">
 						<CardContent className="space-y-3">
 							<h3 className="text-lg">Select your location</h3>
-							<Select onValueChange={(value) => setValue("region", value)}>
+							<Select onValueChange={(value) => form.setValue("region", value)}>
 								<SelectTrigger className="w-full my-2">
 									<SelectValue placeholder="Select a region" />
 								</SelectTrigger>
@@ -361,9 +136,9 @@ export function CreateServer() {
 									</SelectItem>
 								</SelectContent>
 							</Select>
-							{errors.region && (
+							{form.formState.errors.region && (
 								<p className="text-red-500">
-									{errors.region.message as string}
+									{form.formState.errors.region.message as string}
 								</p>
 							)}
 						</CardContent>
@@ -375,11 +150,11 @@ export function CreateServer() {
 							<div className="space-y-3">
 								<h4>Server name</h4>
 								<Input
-									onChange={(e) => setValue("serverName", e.target.value)}
+									onChange={(e) => form.setValue("serverName", e.target.value)}
 								/>
-								{errors.serverName && (
+								{form.formState.errors.serverName && (
 									<p className="text-red-500">
-										{errors.serverName.message as string}
+										{form.formState.errors.serverName.message as string}
 									</p>
 								)}
 							</div>
@@ -388,7 +163,9 @@ export function CreateServer() {
 								<div className="w-1/2 space-y-3">
 									<h4>Select difficulty</h4>
 									<Select
-										onValueChange={(value) => setValue("difficulty", value)}
+										onValueChange={(value) =>
+											form.setValue("difficulty", value)
+										}
 									>
 										<SelectTrigger className="w-full">
 											<SelectValue placeholder="Select a difficulty" />
@@ -401,18 +178,18 @@ export function CreateServer() {
 											<SelectItem value="hardcore">Hardcore</SelectItem>
 										</SelectContent>
 									</Select>
-									{errors.difficulty && (
+									{form.formState.errors.difficulty && (
 										<p className="text-red-500">
-											{errors.difficulty.message as string}
+											{form.formState.errors.difficulty.message as string}
 										</p>
 									)}
 								</div>
 								<div className="w-1/2 flex flex-col justify-center space-y-3 md:space-y-1">
 									<h4 className="pb-2">Allow only premium players</h4>
 									<Switch
-										checked={watch("onlineMode") || false}
+										checked={form.watch("onlineMode") || false}
 										onCheckedChange={(checked) =>
-											setValue("onlineMode", checked)
+											form.setValue("onlineMode", checked)
 										}
 									/>
 								</div>
@@ -470,7 +247,7 @@ export function CreateServer() {
 												type="button"
 												onClick={() => {
 													setCurrentPlanIndex(index);
-													setValue("ramPlan", pricingPlans[index].ram);
+													form.setValue("ramPlan", pricingPlans[index].ram);
 												}}
 												className={`w-2 h-2 rounded-full transition-all ${
 													index === currentPlanIndex
