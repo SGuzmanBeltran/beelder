@@ -29,7 +29,7 @@ services:
       - infra-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /srv/apps/beelder/shared/assets:/assets:ro
+      - /srv/apps/beelder/shared/assets:/assets
     environment:
       - CONSUMER_TOPIC=beelder.staging.server.commands
       - PRODUCER_TOPIC=beelder.staging.server.progress
