@@ -54,6 +54,9 @@ func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.Create
 	if os.IsNotExist(err) {
 		m.logger.Info("JAR not found locally, downloading...", "server_type", serverConfig.ServerType, "version", serverConfig.ServerVersion)
 		url := fmt.Sprintf("https://mcutils.com/api/server-jars/%s/%s/download", serverConfig.ServerType, serverConfig.ServerVersion)
+
+		m.logger.Info("Downloading JAR from URL", "url", url, "server_type", serverConfig.ServerType, "version", serverConfig.ServerVersion)
+
 		downloadErr := m.downloadJar(path, url)
 
 		if downloadErr != nil {
