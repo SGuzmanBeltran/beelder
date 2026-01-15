@@ -41,6 +41,17 @@ func NewLocalJarManagerWithClient(client HTTPClient) *LocalJarManager {
 // GetJar retrieves the JAR file for the given server configuration.
 // If the JAR file is not found locally, it attempts to download it.
 func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.CreateServerConfig) (types.JarInfo, error) {
+	// Create logger with server context for traceability
+	logger := m.logger.With(
+		"server_type", serverConfig.ServerType,
+		"version", serverConfig.ServerVersion,
+	)
+
+	// Add server_id from context if available
+	if serverID, ok := types.GetServerID(ctx); ok {
+		logger = logger.With("server_id", serverID)
+	}
+
 	assetsPath, err := m.assetResolver.GetAssetsPath()
 	if err != nil {
 		return types.JarInfo{}, fmt.Errorf("failed to resolve assets path: %w", err)
@@ -52,12 +63,12 @@ func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.Create
 	cached := true
 
 	if os.IsNotExist(err) {
-		m.logger.Info("JAR not found locally, downloading...", "server_type", serverConfig.ServerType, "version", serverConfig.ServerVersion)
+		logger.Info("JAR not found locally, downloading...")
 		url := fmt.Sprintf("https://mcutils.com/api/server-jars/%s/%s/download", serverConfig.ServerType, serverConfig.ServerVersion)
 
-		m.logger.Info("Downloading JAR from URL", "url", url, "server_type", serverConfig.ServerType, "version", serverConfig.ServerVersion)
+		logger.Info("Downloading JAR from URL", "url", url)
 
-		downloadErr := m.downloadJar(path, url)
+		downloadErr := m.downloadJar(ctx, path, url)
 
 		if downloadErr != nil {
 			return types.JarInfo{}, fmt.Errorf("JAR file not found at %s and failed to download: %w", path, downloadErr)
@@ -77,7 +88,13 @@ func (m *LocalJarManager) GetJar(ctx context.Context, serverConfig *types.Create
 	}, nil
 }
 
-func (m *LocalJarManager) downloadJar(filepath string, url string) error {
+func (m *LocalJarManager) downloadJar(ctx context.Context, filepath string, url string) error {
+	// Create logger with context
+	logger := m.logger
+	if serverID, ok := types.GetServerID(ctx); ok {
+		logger = logger.With("server_id", serverID)
+	}
+
 	resp, err := m.httpClient.Get(url)
 	if err != nil {
 		return err
@@ -102,6 +119,6 @@ func (m *LocalJarManager) downloadJar(filepath string, url string) error {
 		return err
 	}
 
-	m.logger.Info("JAR downloaded successfully", "path", filepath)
+	logger.Info("JAR downloaded successfully", "path", filepath)
 	return nil
 }

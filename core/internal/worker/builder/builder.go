@@ -294,8 +294,11 @@ func (b *Builder) buildImageFromDockerfile(ctx context.Context, dockerfileConten
 
 	builderLogger.Info("Image not found, building...")
 
+	// Add server_id to context for logging traceability
+	ctxWithServerID := types.WithServerID(ctx, serverData.ServerID)
+
 	//Download the server jar
-	jar, err := b.jarManager.GetJar(ctx, serverData.ServerConfig)
+	jar, err := b.jarManager.GetJar(ctxWithServerID, serverData.ServerConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get server jar: %w", err)
 	}
