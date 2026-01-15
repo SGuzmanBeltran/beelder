@@ -40,7 +40,7 @@ func validateServerConfig(config *types.CreateServerConfig) error {
 		return fmt.Errorf("server type cannot be empty")
 	}
 
-	validTypes := []string{"paper", "forge", "fabric"}
+	validTypes := []string{"paper", "forge", "vanilla"}
 	if !contains(validTypes, config.ServerType) {
 		return fmt.Errorf("invalid server type: %s (must be one of %v)", config.ServerType, validTypes)
 	}
