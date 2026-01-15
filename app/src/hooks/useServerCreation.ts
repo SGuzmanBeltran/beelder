@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import axios from "axios";
 import { toast } from "sonner";
@@ -98,65 +98,64 @@ export function useServerCreation() {
 	};
 
 	// Get recommended plan from backend
-	const fetchRecommendedPlan = async (
-		serverType: string,
-		playerCount: number,
-		region: string
-	) => {
-		if (!serverType || !playerCount || !region) return;
+	const fetchRecommendedPlan = useCallback(
+		async (serverType: string, playerCount: number, region: string) => {
+			if (!serverType || !playerCount || !region) return;
 
-		setIsLoadingRecommendation(true);
+			setIsLoadingRecommendation(true);
 
-		let retries = 0;
-		const maxRetries = 3;
+			let retries = 0;
+			const maxRetries = 3;
 
-		while (retries < maxRetries) {
-			try {
-				const { data } = await axios.get(
-					`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
-				);
-
-				// Find the index of the recommended plan
-				const recommendedRam = data.data.recommendation;
-				const planIndex = pricingPlans.findIndex(
-					(plan) => plan.ram === recommendedRam
-				);
-
-				if (planIndex !== -1 && planIndex !== 0) {
-					// Don't auto-select free plan
-					setCurrentPlanIndex(planIndex);
-					setRecommendedPlan(planIndex);
-					form.setValue("ramPlan", pricingPlans[planIndex].ram);
-				}
-
-				// Success - exit the loop
-				setIsLoadingRecommendation(false);
-				return;
-			} catch (error) {
-				retries++;
-
-				if (retries === maxRetries) {
-					// Failed after all retries
-					const message = axios.isAxiosError(error)
-						? error.response?.data?.error || error.message
-						: "Network error. Please check your connection.";
-
-					toast.error("Failed to fetch recommendation", {
-						description: message,
-					});
-				}
-
-				// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
-				if (retries < maxRetries) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, 500 * Math.pow(2, retries - 1))
+			while (retries < maxRetries) {
+				try {
+					const { data } = await axios.get(
+						`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
 					);
+
+					// Find the index of the recommended plan
+					const recommendedRam = data.data.recommendation;
+					const planIndex = pricingPlans.findIndex(
+						(plan) => plan.ram === recommendedRam
+					);
+
+					if (planIndex !== -1 && planIndex !== 0) {
+						// Don't auto-select free plan
+						setCurrentPlanIndex(planIndex);
+						setRecommendedPlan(planIndex);
+						form.setValue("ramPlan", pricingPlans[planIndex].ram);
+					}
+
+					// Success - exit the loop
+					setIsLoadingRecommendation(false);
+					return;
+				} catch (error) {
+					retries++;
+
+					if (retries === maxRetries) {
+						// Failed after all retries
+						const message = axios.isAxiosError(error)
+							? error.response?.data?.error || error.message
+							: "Network error. Please check your connection.";
+
+						toast.error("Failed to fetch recommendation", {
+							description: message,
+						});
+					}
+
+					// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
+					if (retries < maxRetries) {
+						await new Promise((resolve) =>
+							setTimeout(resolve, 500 * Math.pow(2, retries - 1))
+						);
+					}
 				}
 			}
-		}
 
-		setIsLoadingRecommendation(false);
-	};
+			setIsLoadingRecommendation(false);
+		},
+		[setIsLoadingRecommendation, setCurrentPlanIndex, setRecommendedPlan, form]
+	);
 
 	const sendFormData = async (data: ServerConfig) => {
 		setIsSubmitting(true);
@@ -217,7 +216,7 @@ export function useServerCreation() {
 			}
 		});
 		return () => subscription.unsubscribe();
-	}, [form.watch]);
+	}, [fetchRecommendedPlan, form]);
 
 	// Determine badge for current plan
 	const getCurrentPlanBadge = () => {
@@ -246,7 +245,7 @@ export function useServerCreation() {
 		handlePrevious,
 		handleNext,
 		sendFormData,
-        setCurrentPlanIndex,
+		setCurrentPlanIndex,
 
 		// Computed values
 		currentPlan: {

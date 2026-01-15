@@ -21,7 +21,7 @@ That's it. Keep it simple.
 
 ## Third Slice - UI Enhancements
 
-## 1. Refactor create-server. Use custom hook.
+## 1. Refactor create-server. Use custom hook. ✅
 ## 2. Fetch the servers plans (RAM-based).
 ## 3. Fetch jar servers versions.
 ## 4. Add routing to the UI
