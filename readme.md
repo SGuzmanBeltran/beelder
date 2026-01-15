@@ -17,7 +17,7 @@
 - **Event-Driven Architecture** - Kafka/RedPanda for async processing
 - **Docker Isolation** - Each server runs in its own container
 - **Concurrent Builds** - Up to 3 servers building simultaneously
-- **Plan-Based Resources** - Free, Budget, and Premium tiers
+- **RAM-Based Plans** - Flexible memory allocation based on player needs
 
 ---
 
@@ -53,46 +53,89 @@ go run main.go
 
 ---
 
-### Slices
-#### First slice
-In the first slice I desire that we have the creation server flow, the user is allow to create a server based on a configuration and the system report the progress of
-creation.
+## 📦 Development Slices
+
+### ✅ First Slice - Core Server Creation (COMPLETED)
+Basic server provisioning with event-driven architecture.
+
+**Implemented Features:**
+- ✅ REST API for server creation
+- ✅ RedPanda event streaming
+- ✅ Worker service with Docker provisioning
+- ✅ Multi-type server support (Paper, Forge, Fabric) via Strategy Pattern
+- ✅ Concurrent build system (max 3 simultaneous)
+- ✅ SSE real-time status updates
+- ✅ Configuration validation
+- ✅ Health checking system
 
 **Configuration Options:**
 - Server name/MOTD
-- Server type (Paper 1.21.x initially)
+- Server type (Paper, Forge, Fabric)
 - Player count (affects memory allocation)
-- Plan type (free, budget, premium)
+- RAM plan (memory-based allocation)
 - Difficulty (Peaceful, Easy, Normal, Hard)
 - Online mode (official Minecraft accounts only)
 
-**The progress states the server should report will be:**
-- Created
-- Creating
-- Aborted
-- Running
-- Stopped
+**Progress States:**
+- Created → Building → Running → Stopped → Error
 
-**User Experience:**
-- Server connection details once ready
-- Create the server based on a configuration
+---
 
-**Definition of Done:**
-- User can create a server through API
-- Server starts successfully and accepts connections
-- Progress is tracked
-- Basic server info is accessible (IP, port, status)
+### ✅ Second Slice - Frontend Foundation (COMPLETED)
+User interface for server creation and configuration.
 
-**TODO**
-1. [x] Enable configuration.
-    - [x] Receive configuration as an JSON in the endpoint
-    - [x] Send the configuration in the broker message
-    - [x] Receive the configuration in the broker consumer
-2. [x] Create the server based on configuration.
-3. [x] Create the server using different strategies (Server types like Paper, Forge, Fabric).
-4. [x] Creating a server is a concurrent service where max 3 server can be created at a time. Max 5 servers.
-5. [x] Communicate the server creation progress using a broker.
-6. [x] Refactor server templates to use Strategy Pattern
+**Implemented Features:**
+- ✅ React + TypeScript frontend
+- ✅ Server creation form with validation (react-hook-form + zod)
+- ✅ RAM plan selection carousel
+- ✅ Dynamic RAM recommendation based on player count
+- ✅ API integration for server creation
+- ✅ Asset download and versioning system
+
+---
+
+### 🚧 Third Slice - UI Enhancements (IN PROGRESS)
+Improved user experience and server management interface.
+
+**Planned Features:**
+- Custom React hooks for server management
+- Dynamic RAM plan and version fetching
+- Client-side routing
+- Real-time UI updates via SSE
+- Server details
+
+---
+
+### 📋 Fourth Slice - Database & State Persistence (PLANNED)
+Centralized state with database persistence and query capabilities.
+
+**Planned Features:**
+- PostgreSQL database integration
+- State Manager Service (new microservice)
+- Event history tracking
+- User ownership and multi-tenancy
+- REST API for state queries
+- Server status persistence
+
+**Architecture Changes:**
+- New State Manager microservice
+- PostgreSQL for persistent storage
+- Enhanced event schema for state updates
+
+---
+
+### 📋 Fifth Slice - Lifecycle Management & Cleanup (PLANNED)
+Automated server lifecycle and resource management.
+
+**Planned Features:**
+- Auto-shutdown after 5 minutes of uptime (VPS resource constraints)
+- Docker state reconciliation
+- Orphaned container cleanup
+- Server auto-restart capability
+- Resource usage monitoring
+
+**Resource Policy:**
+> All servers auto-shutdown after 5 minutes to optimize VPS resource usage
 
 ## Architecture
 
