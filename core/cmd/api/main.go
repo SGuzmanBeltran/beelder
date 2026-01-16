@@ -4,7 +4,7 @@ import (
 	"beelder/internal/api/handlers"
 	"beelder/internal/api/services"
 	config "beelder/internal/config/api"
-	"beelder/internal/worker/builder"
+	"beelder/internal/helpers"
 	"beelder/pkg/messaging/redpanda"
 	"log"
 	"net/http"
@@ -68,7 +68,7 @@ func setupRoutes(app *fiber.App) {
 	sharedCache := setupCache()
 
 	// Initialize services
-	versionProvider := builder.NewVersionProvider()
+	versionProvider := helpers.NewVersionProvider()
 	serverService := services.NewServerService(producer, versionProvider)
 
 	sse := services.NewSSEService(consumerConfig)

@@ -1,8 +1,8 @@
 package services
 
 import (
+	"beelder/internal/helpers"
 	"beelder/internal/types"
-	"beelder/internal/worker/builder"
 	"beelder/pkg/messaging/redpanda"
 	"encoding/json"
 	"fmt"
@@ -14,10 +14,10 @@ import (
 
 type ServerService struct {
 	producer *redpanda.RedpandaProducer
-	versionProvider *builder.DefaultVersionProvider
+	versionProvider *helpers.DefaultVersionProvider
 }
 
-func NewServerService(producer *redpanda.RedpandaProducer, versionProvider *builder.DefaultVersionProvider) *ServerService {
+func NewServerService(producer *redpanda.RedpandaProducer, versionProvider *helpers.DefaultVersionProvider) *ServerService {
 	return &ServerService{
 		producer: producer,
 		versionProvider: versionProvider,
