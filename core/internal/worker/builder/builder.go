@@ -85,7 +85,7 @@ func NewBuilder(producer *redpanda.RedpandaProducer) *Builder {
 		producer:      producer,
 		healthChecker: healthChecker,
 		logger:        slog.Default().With("component", "builder"),
-		jarManager:    NewLocalJarManager(),
+		jarManager:    NewLocalJarManager(config.WorkerEnvs.BuilderConfig.AssetsPath),
 	}
 	builder.portCounter.Store(initialPort)
 	return builder

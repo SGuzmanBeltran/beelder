@@ -1,7 +1,6 @@
 package builder
 
 import (
-	config "beelder/internal/config/worker"
 	"beelder/internal/types"
 	"context"
 	"fmt"
@@ -23,20 +22,20 @@ type LocalJarManager struct {
 	versionProvider ServerVersionProvider
 }
 
-func NewLocalJarManager() *LocalJarManager {
+func NewLocalJarManager(assetPath string) *LocalJarManager {
 	return &LocalJarManager{
 		httpClient:      &http.Client{},
 		logger:          slog.Default().With("component", "jar_manager"),
-		assetResolver:   NewAssetResolver(config.WorkerEnvs.AssetsPath),
+		assetResolver:   NewAssetResolver(assetPath),
 		versionProvider: NewVersionProvider(),
 	}
 }
 
-func NewLocalJarManagerWithClient(client HTTPClient) *LocalJarManager {
+func NewLocalJarManagerWithClient(client HTTPClient, assetPath string) *LocalJarManager {
 	return &LocalJarManager{
 		httpClient:      client,
 		logger:          slog.Default().With("component", "jar_manager"),
-		assetResolver:   NewAssetResolver(config.WorkerEnvs.AssetsPath),
+		assetResolver:   NewAssetResolver(assetPath),
 		versionProvider: NewVersionProviderWithClient(client),
 	}
 }

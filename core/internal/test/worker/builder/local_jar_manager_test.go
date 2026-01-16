@@ -34,11 +34,11 @@ func newMockHTTPResponse(statusCode int, body string) *http.Response {
 
 // Fixtures
 func newTestManager() *builder.LocalJarManager {
-	return builder.NewLocalJarManager()
+	return builder.NewLocalJarManager("/assets")
 }
 
 func newTestManagerWithClient(client builder.HTTPClient) *builder.LocalJarManager {
-	return builder.NewLocalJarManagerWithClient(client)
+	return builder.NewLocalJarManagerWithClient(client, "/assets")
 }
 
 func newTestContext() context.Context {
