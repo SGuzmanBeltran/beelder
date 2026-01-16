@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"beelder/internal/helpers"
 	"beelder/internal/types"
 	"context"
 	"fmt"
@@ -10,16 +11,11 @@ import (
 	"os"
 )
 
-// HTTPClient interface for making HTTP requests
-type HTTPClient interface {
-	Get(url string) (*http.Response, error)
-}
-
 type LocalJarManager struct {
-	httpClient      HTTPClient
+	httpClient      types.HTTPClient
 	logger          *slog.Logger
 	assetResolver   AssetPathResolver
-	versionProvider ServerVersionProvider
+	versionProvider helpers.ServerVersionProvider
 }
 
 func NewLocalJarManager(assetPath string) *LocalJarManager {
@@ -27,16 +23,16 @@ func NewLocalJarManager(assetPath string) *LocalJarManager {
 		httpClient:      &http.Client{},
 		logger:          slog.Default().With("component", "jar_manager"),
 		assetResolver:   NewAssetResolver(assetPath),
-		versionProvider: NewVersionProvider(),
+		versionProvider: helpers.NewVersionProvider(),
 	}
 }
 
-func NewLocalJarManagerWithClient(client HTTPClient, assetPath string) *LocalJarManager {
+func NewLocalJarManagerWithClient(client types.HTTPClient, assetPath string) *LocalJarManager {
 	return &LocalJarManager{
 		httpClient:      client,
 		logger:          slog.Default().With("component", "jar_manager"),
 		assetResolver:   NewAssetResolver(assetPath),
-		versionProvider: NewVersionProviderWithClient(client),
+		versionProvider: helpers.NewVersionProviderWithClient(client),
 	}
 }
 

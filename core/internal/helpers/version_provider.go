@@ -1,6 +1,7 @@
-package builder
+package helpers
 
 import (
+	"beelder/internal/types"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,7 +14,7 @@ type ServerVersionProvider interface {
 }
 
 type DefaultVersionProvider struct {
-	httpClient HTTPClient
+	httpClient types.HTTPClient
 }
 
 func NewVersionProvider() *DefaultVersionProvider {
@@ -22,7 +23,7 @@ func NewVersionProvider() *DefaultVersionProvider {
 	}
 }
 
-func NewVersionProviderWithClient(client HTTPClient) *DefaultVersionProvider {
+func NewVersionProviderWithClient(client types.HTTPClient) *DefaultVersionProvider {
 	return &DefaultVersionProvider{
 		httpClient: client,
 	}

@@ -37,7 +37,7 @@ func newTestManager() *builder.LocalJarManager {
 	return builder.NewLocalJarManager("/assets")
 }
 
-func newTestManagerWithClient(client builder.HTTPClient) *builder.LocalJarManager {
+func newTestManagerWithClient(client types.HTTPClient) *builder.LocalJarManager {
 	return builder.NewLocalJarManagerWithClient(client, "/assets")
 }
 
