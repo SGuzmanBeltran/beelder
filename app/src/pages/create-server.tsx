@@ -1,20 +1,20 @@
 import { ArrowLeft, ArrowRight } from "@hugeicons/core-free-icons";
-import { Card, CardContent } from "./ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "./ui/select";
+} from "../components/ui/select";
 import { pricingPlans, useServerCreation } from "@/hooks/useServerCreation";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Input } from "./ui/input";
-import { PricingCard } from "./pricing-card";
-import { PricingCardSkeleton } from "./pricing-card-skeleton";
-import { Slider } from "./ui/slider";
-import { Switch } from "./ui/switch";
+import { Input } from "../components/ui/input";
+import { PricingCard } from "../components/pricing-card";
+import { PricingCardSkeleton } from "../components/pricing-card-skeleton";
+import { Slider } from "../components/ui/slider";
+import { Switch } from "../components/ui/switch";
 
 export function CreateServer() {
 	const {
