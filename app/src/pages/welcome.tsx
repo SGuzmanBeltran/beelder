@@ -1,8 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export function Welcome() {
+	const navigate = useNavigate();
+	
 	return (
 		<div className="flex items-center justify-center min-h-150">
 			<Card className="max-w-2xl w-full">
@@ -96,7 +99,11 @@ export function Welcome() {
 					</div>
 
 					{/* CTA Button */}
-					<Button size="lg" className="mt-4" onClick={() => {}}>
+					<Button
+						size="lg"
+						className="mt-4"
+						onClick={() => navigate("/create-server")}
+					>
 						Create my first server
 					</Button>
 
