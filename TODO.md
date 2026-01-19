@@ -26,9 +26,9 @@ That's it. Keep it simple.
     - Create endpoint (/server/{server_type}/versions) ✅
     - Use version_provider.go ✅
     - Cache endpoint ✅
-    - Fetch when select a server type.
-    - Update options in the UI
-## 3. Add routing to the UI
+    - Fetch when select a server type. ✅
+    - Update options in the UI ✅
+## 3. Add routing to the UI (React router [https://reactrouter.com/start/framework/installation](https://reactrouter.com/start/framework/installation))
 ## 4. Update UI when server is created.
 ## 5. Create new view to show the new server info
 ## 6. Update architecture diagram
