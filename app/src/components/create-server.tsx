@@ -23,6 +23,8 @@ export function CreateServer() {
 		recommendedPlan,
 		isSubmitting,
 		form,
+		serverVersions,
+		loadingServerVersions,
 		handlePrevious,
 		handleNext,
 		sendFormData,
@@ -66,17 +68,30 @@ export function CreateServer() {
 								)}
 
 								<Select
+									key={form.watch("serverType") || "no-server-type"}
 									onValueChange={(value) =>
 										form.setValue("serverVersion", value)
 									}
+									value={form.watch("serverVersion") || undefined}
+									disabled={serverVersions.length === 0}
 								>
 									<SelectTrigger className="w-full my-2">
-										<SelectValue placeholder="Select server version" />
+										<SelectValue
+											placeholder={
+												loadingServerVersions
+													? "Loading server versions..."
+													: serverVersions.length === 0
+														? "Select a server type first"
+														: "Select server version"
+											}
+										/>
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="1.21.11">1.21.11</SelectItem>
-										<SelectItem value="1.21.10">1.21.10</SelectItem>
-										<SelectItem value="1.21.9">1.21.9</SelectItem>
+										{serverVersions.map((version) => (
+											<SelectItem key={version} value={version}>
+												{version}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 								{form.formState.errors.serverVersion && (

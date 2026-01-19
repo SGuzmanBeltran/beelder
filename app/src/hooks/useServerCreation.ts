@@ -67,6 +67,8 @@ interface CreationResponse {
 type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export function useServerCreation() {
+	const [serverVersions, setServerVersions] = useState<string[]>([]);
+	const [loadingServerVersions, setLoadingServerVersions] = useState(false);
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 	const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
 	const [recommendedPlan, setRecommendedPlan] = useState<number | null>(null);
@@ -110,13 +112,13 @@ export function useServerCreation() {
 			while (retries < maxRetries) {
 				try {
 					const { data } = await axios.get(
-						`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`
+						`${API_URL}/api/v1/server/recommended-plans?server_type=${serverType}&player_count=${playerCount}&region=${region}`,
 					);
 
 					// Find the index of the recommended plan
 					const recommendedRam = data.data.recommendation;
 					const planIndex = pricingPlans.findIndex(
-						(plan) => plan.ram === recommendedRam
+						(plan) => plan.ram === recommendedRam,
 					);
 
 					if (planIndex !== -1 && planIndex !== 0) {
@@ -146,7 +148,7 @@ export function useServerCreation() {
 					// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
 					if (retries < maxRetries) {
 						await new Promise((resolve) =>
-							setTimeout(resolve, 500 * Math.pow(2, retries - 1))
+							setTimeout(resolve, 500 * Math.pow(2, retries - 1)),
 						);
 					}
 				}
@@ -154,7 +156,51 @@ export function useServerCreation() {
 
 			setIsLoadingRecommendation(false);
 		},
-		[setIsLoadingRecommendation, setCurrentPlanIndex, setRecommendedPlan, form]
+		[setIsLoadingRecommendation, setCurrentPlanIndex, setRecommendedPlan, form],
+	);
+
+	const fetchServerVersions = useCallback(
+		async (serverType: string) => {
+			if (!serverType) return;
+			setLoadingServerVersions(true);
+			form.setValue("serverVersion", "" as string);
+			setServerVersions([]);
+			let retries = 0;
+			const maxRetries = 3;
+			while (retries < maxRetries) {
+				try {
+					const { data } = await axios.get(
+						`${API_URL}/api/v1/server/${serverType}/versions`,
+					);
+					setServerVersions(data.data.versions);
+					return;
+				} catch (error) {
+					retries++;
+
+					if (retries === maxRetries) {
+						// Failed after all retries
+						const message = axios.isAxiosError(error)
+							? error.response?.data?.error || error.message
+							: "Network error. Please check your connection.";
+
+						toast.error("Failed to fetch server versions", {
+							description: message,
+						});
+						setServerVersions([]);
+					}
+
+					// Wait before retrying (exponential backoff: 500ms, 1s, 2s)
+					if (retries < maxRetries) {
+						await new Promise((resolve) =>
+							setTimeout(resolve, 500 * Math.pow(2, retries - 1)),
+						);
+					}
+				} finally {
+					setLoadingServerVersions(false);
+				}
+			}
+		},
+		[setServerVersions, form],
 	);
 
 	const sendFormData = async (data: ServerConfig) => {
@@ -171,7 +217,7 @@ export function useServerCreation() {
 					ram_plan: data.ramPlan,
 					difficulty: data.difficulty,
 					online_mode: data.onlineMode,
-				}
+				},
 			);
 			toast.success("Server created successfully!", {
 				description: `Your server "${responseData.name}" has been created.`,
@@ -209,7 +255,7 @@ export function useServerCreation() {
 					fetchRecommendedPlan(
 						value.serverType!,
 						value.playerCount!,
-						value.region!
+						value.region!,
 					);
 				}, 1000);
 				return () => clearTimeout(timeoutId);
@@ -217,6 +263,17 @@ export function useServerCreation() {
 		});
 		return () => subscription.unsubscribe();
 	}, [fetchRecommendedPlan, form]);
+
+	useEffect(() => {
+		const subscription = form.watch((value, { name }) => {
+			if (name === "serverType" && value.serverType) {
+				// Fetch server versions based on server type
+				fetchServerVersions(value.serverType!);
+				return () => {};
+			}
+		});
+		return () => subscription.unsubscribe();
+	}, [fetchServerVersions, form]);
 
 	// Determine badge for current plan
 	const getCurrentPlanBadge = () => {
@@ -237,6 +294,8 @@ export function useServerCreation() {
 		isLoadingRecommendation,
 		recommendedPlan,
 		isSubmitting,
+		serverVersions,
+		loadingServerVersions,
 
 		// Form methods
 		form,
