@@ -28,10 +28,11 @@ That's it. Keep it simple.
     - Cache endpoint ✅
     - Fetch when select a server type. ✅
     - Update options in the UI ✅
-## 3. Add routing to the UI (React router [https://reactrouter.com/start/framework/installation](https://reactrouter.com/start/framework/installation))
-## 4. Update UI when server is created.
+## 3. Add routing to the UI (React router [https://reactrouter.com/start/framework/installation](https://reactrouter.com/start/framework/installation)) ✅
+## 4. Update UI when server is created. ✅
 ## 5. Create new view to show the new server info
-## 6. Update architecture diagram
+## 6. Order server versions
+## . Update architecture diagram
 
 ---
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -67,6 +68,8 @@ interface CreationResponse {
 type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export function useServerCreation() {
+	const navigate = useNavigate();
+
 	const [serverVersions, setServerVersions] = useState<string[]>([]);
 	const [loadingServerVersions, setLoadingServerVersions] = useState(false);
 	const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
@@ -203,7 +206,7 @@ export function useServerCreation() {
 		[setServerVersions, form],
 	);
 
-	const sendFormData = async (data: ServerConfig) => {
+	const createServer = async (data: ServerConfig) => {
 		setIsSubmitting(true);
 		try {
 			const { data: responseData } = await axios.post<CreationResponse>(
@@ -222,6 +225,8 @@ export function useServerCreation() {
 			toast.success("Server created successfully!", {
 				description: `Your server "${responseData.name}" has been created.`,
 			});
+
+			navigate("/servers");
 		} catch (error) {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			if (axios.isAxiosError(error)) {
@@ -303,7 +308,7 @@ export function useServerCreation() {
 		// Handlers
 		handlePrevious,
 		handleNext,
-		sendFormData,
+		createServer,
 		setCurrentPlanIndex,
 
 		// Computed values

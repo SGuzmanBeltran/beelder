@@ -12,6 +12,7 @@ export const router = createBrowserRouter([
 		children: [
 			{ index: true, element: <Welcome /> },
 			{ index: false, path: "create-server", element: <CreateServer /> },
+			{ index: false, path: "servers", element: <div>Servers List</div> },
 			{ path: "*", element: <div>Not Found</div> },
 		],
 	},

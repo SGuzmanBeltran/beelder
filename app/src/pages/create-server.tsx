@@ -27,14 +27,14 @@ export function CreateServer() {
 		loadingServerVersions,
 		handlePrevious,
 		handleNext,
-		sendFormData,
+		createServer,
 		setCurrentPlanIndex,
 		currentPlan,
 	} = useServerCreation();
 
 	return (
 		<form
-			onSubmit={form.handleSubmit(sendFormData)}
+			onSubmit={form.handleSubmit(createServer)}
 			className="flex flex-col items-center justify-center min-h-150 space-y-8 px-4 w-full lg:w-2/3 lg:px-0"
 		>
 			<div className="flex w-full justify-start">
