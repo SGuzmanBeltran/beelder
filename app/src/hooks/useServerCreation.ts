@@ -226,7 +226,7 @@ export function useServerCreation() {
 				description: `Your server "${responseData.name}" has been created.`,
 			});
 
-			navigate("/servers");
+			navigate(`/server/${responseData.id}`, { state: { server: data } });
 		} catch (error) {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			if (axios.isAxiosError(error)) {
