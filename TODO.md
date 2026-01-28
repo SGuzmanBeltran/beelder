@@ -30,9 +30,9 @@ That's it. Keep it simple.
     - Update options in the UI ✅
 ## 3. Add routing to the UI (React router [https://reactrouter.com/start/framework/installation](https://reactrouter.com/start/framework/installation)) ✅
 ## 4. Update UI when server is created. ✅
-## 5. Create new view to show the new server info
-## 6. Order server versions
-## . Update architecture diagram
+## 5. Create new view to show the new server info ✅
+## 6. Order server versions ✅
+## 7. Update architecture diagram
 
 ---
 

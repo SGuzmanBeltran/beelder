@@ -43,7 +43,7 @@ export function ServerDetails() {
 	};
 
 	return (
-		<div className="min-h-screen px-6 lg:px-12 py-8">
+		<div className="min-h-screen px-6 lg:px-12 pt-8">
 			<div className="max-w-7xl mx-auto space-y-8">
 				{/* Header */}
 				<ServerHeader

@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
@@ -14,10 +17,10 @@ import (
 
 type ServerService struct {
 	producer *redpanda.RedpandaProducer
-	versionProvider *helpers.DefaultVersionProvider
+	versionProvider helpers.ServerVersionProvider
 }
 
-func NewServerService(producer *redpanda.RedpandaProducer, versionProvider *helpers.DefaultVersionProvider) *ServerService {
+func NewServerService(producer *redpanda.RedpandaProducer, versionProvider helpers.ServerVersionProvider) *ServerService {
 	return &ServerService{
 		producer: producer,
 		versionProvider: versionProvider,
@@ -83,6 +86,46 @@ func (s *ServerService) GetServerVersions(serverType string) ([]string, error) {
 		return nil, err
 	}
 
-	return versions, nil
+	// Filter out experimental versions (containing "-")
+	// This cleans up lists like Paper which include RC/Pre-release versions
+	var cleanVersions []string
+	for _, v := range versions {
+		if !strings.Contains(v, "-") {
+			cleanVersions = append(cleanVersions, v)
+		}
+	}
+	versions = cleanVersions
 
+	// Sort versions descending (newest first)
+	sort.Slice(versions, func(i, j int) bool {
+		return compareVersions(versions[i], versions[j])
+	})
+
+	return versions, nil
+}
+
+// Helper function to compare versions
+func compareVersions(v1, v2 string) bool {
+	parts1 := strings.Split(v1, ".")
+	parts2 := strings.Split(v2, ".")
+
+	maxLen := len(parts1)
+	if len(parts2) > maxLen {
+		maxLen = len(parts2)
+	}
+
+	for i := range maxLen {
+		var n1, n2 int
+		if i < len(parts1) {
+			n1, _ = strconv.Atoi(parts1[i])
+		}
+		if i < len(parts2) {
+			n2, _ = strconv.Atoi(parts2[i])
+		}
+
+		if n1 != n2 {
+			return n1 > n2
+		}
+	}
+	return false
 }
