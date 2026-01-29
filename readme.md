@@ -4,8 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Required-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 [![Kafka](https://img.shields.io/badge/Kafka-RedPanda-FF6600?style=flat&logo=apache-kafka)](https://redpanda.com/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat&logo=react)](https://reactjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=flat&logo=postgresql)](https://www.postgresql.org/)
 
-> A learning project that replicates a Minecraft server platform using Go, demonstrating event-driven architecture, containerization, and the Strategy pattern.
+> Beelder is a learning project replicating a Minecraft server hosting platform. Built with Go (backend) and React (frontend), it showcases event-driven architecture with RedPanda, Docker containerization, PostgreSQL persistence, automated lifecycle management, and the Strategy pattern for multi-type server support.
 
 ---
 
@@ -18,7 +20,9 @@
 - **Docker Isolation** - Each server runs in its own container
 - **Concurrent Builds** - Up to 3 servers building simultaneously
 - **RAM-Based Plans** - Flexible memory allocation based on player needs
-
+- **Database Persistence** - PostgreSQL for server state and user management
+- **State Management** - Centralized event tracking and server lifecycle control
+- **Automated Cleanup** - Auto-shutdown after 5 minutes and orphaned container removal
 ---
 
 ## 📋 Quick Start
@@ -46,109 +50,43 @@ docker-compose up -d
 cd core/cmd/api
 go run main.go
 
-# Run Worker (in another terminal)
+# Run Worker
 cd core/cmd/worker
 go run main.go
+
+# Run Webapp
+cd app
+bun run dev
 ```
 
----
-
-## 📦 Development Slices
-
-### ✅ First Slice - Core Server Creation (COMPLETED)
-Basic server provisioning with event-driven architecture.
-
-**Implemented Features:**
-- ✅ REST API for server creation
-- ✅ RedPanda event streaming
-- ✅ Worker service with Docker provisioning
-- ✅ Multi-type server support (Paper, Forge, Fabric) via Strategy Pattern
-- ✅ Concurrent build system (max 3 simultaneous)
-- ✅ SSE real-time status updates
-- ✅ Configuration validation
-- ✅ Health checking system
-
-**Configuration Options:**
-- Server name/MOTD
-- Server type (Paper, Forge, Fabric)
-- Player count (affects memory allocation)
-- RAM plan (memory-based allocation)
-- Difficulty (Peaceful, Easy, Normal, Hard)
-- Online mode (official Minecraft accounts only)
-
-**Progress States:**
-- Created → Building → Running → Stopped → Error
-
----
-
-### ✅ Second Slice - Frontend Foundation (COMPLETED)
-User interface for server creation and configuration.
-
-**Implemented Features:**
-- ✅ React + TypeScript frontend
-- ✅ Server creation form with validation (react-hook-form + zod)
-- ✅ RAM plan selection carousel
-- ✅ Dynamic RAM recommendation based on player count
-- ✅ API integration for server creation
-- ✅ Asset download and versioning system
-
----
-
-### 🚧 Third Slice - UI Enhancements (IN PROGRESS)
-Improved user experience and server management interface.
-
-**Planned Features:**
-- Custom React hooks for server management
-- Dynamic RAM plan and version fetching
-- Client-side routing
-- Real-time UI updates via SSE
-- Server details
-
----
-
-### 📋 Fourth Slice - Database & State Persistence (PLANNED)
-Centralized state with database persistence and query capabilities.
-
-**Planned Features:**
-- PostgreSQL database integration
-- State Manager Service (new microservice)
-- Event history tracking
-- User ownership and multi-tenancy
-- REST API for state queries
-- Server status persistence
-
-**Architecture Changes:**
-- New State Manager microservice
-- PostgreSQL for persistent storage
-- Enhanced event schema for state updates
-
----
-
-### 📋 Fifth Slice - Lifecycle Management & Cleanup (PLANNED)
-Automated server lifecycle and resource management.
-
-**Planned Features:**
-- Auto-shutdown after 5 minutes of uptime (VPS resource constraints)
-- Docker state reconciliation
-- Orphaned container cleanup
-- Server auto-restart capability
-- Resource usage monitoring
-
-**Resource Policy:**
-> All servers auto-shutdown after 5 minutes to optimize VPS resource usage
-
 ## Architecture
+### First slice - Third slice
+![Beelder Architecture](docs/images/architecture-1.svg)
 
-![Beelder Architecture](docs/images/architecture-1.png)
+### Forth slice - Current
+![Beelder Architecture](docs/diagrams/architecture-2.svg)
 
-**Flow:**
+**Creation server Flow:**
 1. Client sends server creation request to API
-2. API validates and publishes to Kafka
+2. API validates, creates the server registry in the database and publishes to Kafka
 3. Worker consumes message and begins provisioning
 4. Worker builds and deploys Docker container
 5. Worker performs health checks
 6. Worker publishes status updates to Kafka
+    6.1 State manager consumes status updates and persists to database
 7. Event Emitter broadcasts to connected clients
 8. Client receives real-time status updates
+    8.1. State manager reviews constantly if the container is being used.
+    8.2. Shut down unused servers.
+
+
+## ⚠️ Limitations
+- **Auto-Shutdown Policy**: All servers automatically shut down after 5 minutes of uptime to optimize VPS resources.
+- **Concurrent Builds**: Limited to 3 simultaneous server builds.
+- **Supported Server Types**: Paper, Forge, Fabric (via Strategy Pattern).
+
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md) for the detailed development roadmap, including completed and upcoming slices.
 
 For detailed component responsibilities, see [ARCHITECTURE.md](ARCHITECTURE.md).
