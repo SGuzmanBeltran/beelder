@@ -60,11 +60,12 @@ bun run dev
 ```
 
 ## Architecture
-### First slice - Third slice
+### First - Third slice
 ![Beelder Architecture](docs/images/architecture-1.svg)
 
-### Forth slice - Current
+### Fourth slice - Current
 ![Beelder Architecture](docs/diagrams/architecture-2.svg)
+![Beelder database](docs/diagrams/database.svg)
 
 **Creation server Flow:**
 1. Client sends server creation request to API
@@ -86,7 +87,6 @@ bun run dev
 - **Supported Server Types**: Paper, Forge, Fabric (via Strategy Pattern).
 
 ## Roadmap
-
 See [docs/roadmap.md](docs/roadmap.md) for the detailed development roadmap, including completed and upcoming slices.
 
 For detailed component responsibilities, see [ARCHITECTURE.md](ARCHITECTURE.md).
