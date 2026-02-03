@@ -32,14 +32,14 @@ That's it. Keep it simple.
 ## 4. Update UI when server is created. ✅
 ## 5. Create new view to show the new server info ✅
 ## 6. Order server versions ✅
-## 7. Update architecture diagram
+## 7. Update architecture diagram ✅
 
 ---
 
 ## Fourth Slice - Database & State Persistence
 
-## 1. Design database schema (servers, server_events, users, server_plans)
-## 2. Add PostgreSQL to docker-compose
+## 1. Design database schema (servers, server_events, users, server_plans) ✅
+## 2. Add PostgreSQL to docker-compose ✅
 ## 3. Implement database migrations
 ## 4. Add database connection pooling
 ## 5. Create new State Manager service structure (`cmd/state-manager`)

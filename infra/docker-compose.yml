@@ -24,8 +24,40 @@ services:
     ports:
       - "9092:9092"   # internal within docker network (service name DNS)
       - "29092:29092" # host access for local dev tools
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
     healthcheck:
       test: ["CMD", "bash", "-lc", "rpk cluster info || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - infra-network
+
+  # PostgreSQL Service
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - infra-network
+
+networks:
+  infra-network:
+    name: infra-network
+    external: true
+
+volumes:
+  postgres_data:
+  redpanda-data:
